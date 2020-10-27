@@ -3,7 +3,7 @@
 """
 S. Urista
 Oct 2020
-Module documentation goes here
+Week 1 of WPA #3
 """
 
 class Room:

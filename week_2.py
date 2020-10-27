@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 S. Urista
 Oct 2020
-Module documentation goes here
+Week 2 of WPA #3
 """
 class Room:
     def __init__(self, name, size):
@@ -12,7 +12,6 @@ class Room:
 
     def __str__(self):
         return "{self.name}, {self.size}".format(self=self)
-
 
 
 class House:
@@ -24,21 +23,18 @@ class House:
             self.rooms.append(item)
 
     def size(self):
-        return sum([one_room.size for one_room in self.rooms])
+        return sum(one_room.size for one_room in self.rooms)
 
 
     def __str__(self):
-        return self.rooms
+        output = "House: \n"
+        output += "\n".join(str(one_room) for one_room in self.rooms)
+        return output
 
-
-
+h = House()
 bedroom = Room('bedroom', 10)
 kitchen = Room('kitchen', 9)
 bathroom = Room('bathroom', 3)
+h.add_rooms(bedroom, kitchen, bathroom)
 
-h = House()
-
-print(bedroom.size)
-print(kitchen.name)
-print(bathroom.size)
 print(h)
