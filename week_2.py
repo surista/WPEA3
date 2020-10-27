@@ -16,15 +16,29 @@ class Room:
 
 
 class House:
-    def __init__(self, home_name):
-        self.home_name = home_name
+    def __init__(self):
+        self.rooms = []
 
-    def add_rooms(self, room):
-        self.room = room
+    def add_rooms(self, *args):
+        for item in args:
+            self.rooms.append(item)
+
+    def size(self):
+        return sum([one_room.size for one_room in self.rooms])
+
 
     def __str__(self):
-        return "{self.name}: ".format(self=self)
+        return self.rooms
+
+
+
+bedroom = Room('bedroom', 10)
+kitchen = Room('kitchen', 9)
+bathroom = Room('bathroom', 3)
+
 h = House()
-myoffice = Room('office', 10)
-h.add_rooms(myoffice)
+
+print(bedroom.size)
+print(kitchen.name)
+print(bathroom.size)
 print(h)
