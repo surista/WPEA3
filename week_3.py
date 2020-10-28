@@ -6,6 +6,10 @@ Oct 2020
 Module documentation goes here
 """
 
+class NotEnoughSpaceError(Exception):
+    "Raised if trying to add new room puts total size over limit "
+    pass
+
 class Room:
     def __init__(self, name, size):
         self.name = name
@@ -16,19 +20,17 @@ class Room:
 
 
 class House:
-    def __init__(self, h_size=100, available_space=100):
+    def __init__(self, available_space=100):
         self.rooms = []
-        self.h_size = h_size
         self.available_space = available_space
 
     def add_rooms(self, *args):
-
         for item in args:
-            if item.size > self.available_space:
-                raise NotEnoughSpaceError(f'{item.name} needs {item.size}; only {self.available_space - self.h_size()} available')
+            if self.size() + item.size > self.available_space:
+                raise NotEnoughSpaceError(
+                    f'{item.name} needs {item.size}; only {self.available_space - self.size()} available')
             else:
                 self.rooms.append(item)
-                self.available_space -= item.size
 
     def size(self):
         return sum(one_room.size for one_room in self.rooms)
@@ -38,12 +40,10 @@ class House:
         print(output)
 
     def __str__(self):
-        output = "House: \n"
+        output = "House:\n"
         output += "\n".join(str(one_room) for one_room in self.rooms)
         return output
 
 
-class NotEnoughSpaceError(Exception):
-    "Raised if trying to add new room puts total size over limit "
-    pass
+
 
