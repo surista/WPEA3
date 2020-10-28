@@ -8,7 +8,6 @@ Module documentation goes here
 
 from week_2 import Room, House
 
-
 def test_empty_house():
     h = House()
     assert h.size() == 0
