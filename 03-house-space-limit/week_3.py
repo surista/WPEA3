@@ -3,8 +3,9 @@
 """
 S. Urista
 Oct 2020
-Week 2 of WPA #3
+Week 3 of WPE A3
 """
+
 class Room:
     def __init__(self, name, size):
         self.name = name
@@ -15,7 +16,7 @@ class Room:
 
 
 class House:
-    def __init__(self):
+    def __init__(self, size):
         self.rooms = []
 
     def add_rooms(self, *args):
@@ -30,10 +31,10 @@ class House:
         print(output)
 
     def __str__(self):
-        output = "House: \n"
-        output += "\n".join(str(one_room) for one_room in self.rooms)
+        output = 'House:\n'
+        output += '\n'.join(str(one_room)
+                            for one_room in self.rooms)
         return output
-
 
 h = House()
 bedroom = Room('bedroom', 10)

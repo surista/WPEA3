@@ -1,0 +1,300 @@
+
+This week, we'll finish up our journey into real estate. And we'll do it with a query system that'll allow us to find houses based on their rooms.
+
+Consider: A neighborhood contains houses, and each house contains room. I want you to write a method on "Neighborhood" that, when invoked, returns a set (yes, a set -- more on that in a moment) of houses in our neighborhood with a room matching our description.
+
+For example, let's say that I have a neighborhood "n", and want to find all of the homes with a 20m kitchen.  I could say:
+
+    n.find_with_room(name='kitchen', size=10)
+
+
+and the return value will be a set with all of the homes whose kitchen is that size.
+
+A few things to notice about this:
+
+    The return value from this method will be a set. Sets enforce the uniqueness of their elements, which means that each house containing a matching room will appear only once -- even if multiple rooms in the house match our query.
+    The query will be passed in the form of keywords arguments.  The only two attributes we've defined on rooms to date are "name" and "size", but try to make your code generic enough to handle future extensions.
+    A match will be defined as a *complete* match.  I considered making it possible to have partial matches, and even to use < and > in your query, but decided to keep it relatively simple.  If you ask for name='kitchen' but don't specify a size, then nothing will match (rather than everything).
+    The query won't support multiple conditions.  However, because you're getting a set returned from the method, you should be able to use the "|" (union) and "&" (intersection) operators on sets to combine the results from multiple method calls, and find the home of your dreams.
+
+
+This might be a bit tough, so I'm going to give you a few topics that'll probably come in handy.  I'm not sure how much to say, so I'll mention the topics; if people are stuck, then I'll post further suggestions and details in the forum:
+
+    set comprehensions
+    kwargs
+    the "vars" function
+
+
+The tests have been modified (ever so slightly) to include "find_with_room"; look toward the end of the test to see the test and results.
+
+I'll be back on Monday with a solution.
+
+Reuven
+
+import pytest
+from solution import Room, House, NotEnoughSpaceError, Neighborhood, Apartment, TownHouse, SingleFamilyHouse
+
+
+def test_empty_house():
+    h = House()
+    assert h.size() == 0
+    assert h.available_space == 100
+
+
+def test_zero_size_house_add_room():
+    h = House(0)
+    assert h.available_space == 0
+    bedroom = Room('bedroom', 10)
+
+    with pytest.raises(NotEnoughSpaceError):
+        h.add_rooms(bedroom)
+
+
+def test_small_house_add_equal_then_more():
+    h = House(15)
+    assert h.available_space == 15
+    bedroom = Room('bedroom', 15)
+    h.add_rooms(bedroom)
+    assert h.size() == 15
+    assert h.available_space == 15
+
+    tiny_room = Room('very small closet', 0.01)
+    with pytest.raises(NotEnoughSpaceError):
+        h.add_rooms(tiny_room)
+
+
+def test_zero_size_house_add_room_with_plus():
+    h = House(0)
+    assert h.available_space == 0
+    bedroom = Room('bedroom', 10)
+
+    with pytest.raises(NotEnoughSpaceError):
+        h = h + bedroom
+
+
+def test_small_house_add_equal_then_more_with_plus():
+    h = House(15)
+    assert h.available_space == 15
+    bedroom = Room('bedroom', 15)
+    h += bedroom
+    assert h.size() == 15
+    assert h.available_space == 15
+
+    tiny_room = Room('very small closet', 0.01)
+    with pytest.raises(NotEnoughSpaceError):
+        h += tiny_room
+
+
+def test_small_house():
+    h = House()
+    bedroom = Room('bedroom', 10)
+    kitchen = Room('kitchen', 9)
+    bathroom = Room('bathroom', 3)
+    h.add_rooms(bedroom, kitchen, bathroom)
+
+    assert h.size() == 22
+    assert len(h.rooms) == 3
+    assert str(h) == '''House:
+bedroom, 10m
+kitchen, 9m
+bathroom, 3m'''
+
+
+def test_small_house_with_plus():
+    h = House()
+    bedroom = Room('bedroom', 10)
+    kitchen = Room('kitchen', 9)
+    bathroom = Room('bathroom', 3)
+    h += bedroom
+    h += kitchen
+    h += bathroom
+
+    assert h.size() == 22
+    assert len(h.rooms) == 3
+    assert str(h) == '''House:
+bedroom, 10m
+kitchen, 9m
+bathroom, 3m'''
+
+
+def test_palace():
+    h = House(1000)
+
+    for i in range(10):
+        h.add_rooms(Room(f'bedroom {i}', 15))
+
+    for i in range(5):
+        h.add_rooms(Room(f'bathroom {i}', 3))
+
+    for i in range(3):
+        h.add_rooms(Room(f'kitchen {i}', 3))
+
+    assert h.size() == 174
+    assert len(h.rooms) == 18
+
+
+def test_one_neighborhood():
+    Neighborhood.total_size = 0
+    n = Neighborhood()
+
+    houses = []
+    for i in range(3):
+        h = House()
+        bedroom = Room('bedroom', 10)
+        kitchen = Room('kitchen', 9)
+        bathroom = Room('bathroom', 3)
+        h.add_rooms(bedroom, kitchen, bathroom)
+        houses.append(h)
+
+    n.add_houses(*houses)
+    assert n.size() == Neighborhood.total_size
+
+
+def test_one_neighborhood_with_plus():
+    Neighborhood.total_size = 0
+    n = Neighborhood()
+
+    houses = []
+    for i in range(3):
+        h = House()
+        bedroom = Room('bedroom', 10)
+        kitchen = Room('kitchen', 9)
+        bathroom = Room('bathroom', 3)
+        h.add_rooms(bedroom, kitchen, bathroom)
+        houses.append(h)
+
+    for one_house in houses:
+        n += one_house
+    assert n.size() == Neighborhood.total_size
+
+
+def test_two_neighborhoods():
+    Neighborhood.total_size = 0
+    n1 = Neighborhood()
+    n2 = Neighborhood()
+
+    houses = []
+    for i in range(3):
+        h = House()
+        bedroom = Room('bedroom', 10)
+        kitchen = Room('kitchen', 9)
+        bathroom = Room('bathroom', 3)
+        h.add_rooms(bedroom, kitchen, bathroom)
+        houses.append(h)
+
+    n1.add_houses(*houses)
+    n2.add_houses(*houses)
+
+    assert n1.size() + n2.size() == Neighborhood.total_size
+
+
+def test_default_apartment_house_sizes():
+    h = Apartment()
+    assert h.available_space == 80
+
+    h = Apartment(200)
+    assert h.available_space == 200
+
+
+def test_default_townhouse_house_sizes():
+    h = TownHouse()
+    assert h.available_space == 100
+
+    h = TownHouse(200)
+    assert h.available_space == 200
+
+
+def test_default_single_family_house_sizes():
+    h = SingleFamilyHouse()
+    assert h.available_space == 200
+
+    h = SingleFamilyHouse(400)
+    assert h.available_space == 400
+
+
+def test_house_tax():
+    h = House()
+    bedroom = Room('bedroom', 10)
+    kitchen = Room('kitchen', 9)
+    bathroom = Room('bathroom', 3)
+    h.add_rooms(bedroom, kitchen, bathroom)
+
+    assert h.calculate_tax() == 2200
+
+
+def test_apartment_tax():
+    h = Apartment()
+    bedroom = Room('bedroom', 10)
+    kitchen = Room('kitchen', 9)
+    bathroom = Room('bathroom', 3)
+    h.add_rooms(bedroom, kitchen, bathroom)
+
+    assert h.calculate_tax() == 1650
+
+
+def test_townhouse_tax():
+    h = TownHouse()
+    bedroom = Room('bedroom', 10)
+    kitchen = Room('kitchen', 9)
+    bathroom = Room('bathroom', 3)
+    h.add_rooms(bedroom, kitchen, bathroom)
+
+    assert h.calculate_tax() == 2200
+
+
+def test_small_single_family_house_tax():
+    h = SingleFamilyHouse()
+    bedroom = Room('bedroom', 10)
+    kitchen = Room('kitchen', 9)
+    bathroom = Room('bathroom', 3)
+    h.add_rooms(bedroom, kitchen, bathroom)
+
+    assert h.calculate_tax() == 2640
+
+
+def test_large_single_family_house_tax():
+    h = SingleFamilyHouse(300)
+    bedroom = Room('bedroom', 100)
+    kitchen = Room('kitchen', 90)
+    bathroom = Room('bathroom', 30)
+    h.add_rooms(bedroom, kitchen, bathroom)
+
+    assert h.calculate_tax() == 28500
+
+
+def test_mixed_neighborhood():
+    Neighborhood.total_size = 0
+    n = Neighborhood()
+
+    houses = []
+    for house_type in [Apartment, TownHouse, SingleFamilyHouse]:
+        h = house_type()
+        bedroom = Room('bedroom', 10)
+        kitchen = Room('kitchen', 9)
+        bathroom = Room('bathroom', 3)
+        h.add_rooms(bedroom, kitchen, bathroom)
+        houses.append(h)
+
+        assert str(h) == f'''{house_type.__name__}:
+bedroom, 10m
+kitchen, 9m
+bathroom, 3m'''
+
+    n.add_houses(*houses)
+    assert n.size() == Neighborhood.total_size
+    assert dict(**n.house_types()) == {'Apartment': 1,
+                                       'TownHouse': 1, 'SingleFamilyHouse': 1}
+
+    assert n.calculate_tax() == 6490
+
+    assert n.find_with_room(name='bedroom', size=11) == set()
+    assert len(n.find_with_room(name='bedroom', size=10)) == 3
+
+
+ 
+
+Questions? Comments? Problems? The Weekly Python Exercise forum is at http://forum.lerner.co.il/. To get Reuven's attention, be sure to tag your message with @reuven.
+To make sure you keep getting these emails, please add reuven@lerner.co.il to your address book or whitelist us. Want out of the loop? Unsubscribe.
+
+Our postal address: 14 Migdal Oz Street, Apt. #1, Modi'in 71703 Israel
+

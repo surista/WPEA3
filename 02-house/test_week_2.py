@@ -23,10 +23,9 @@ def test_small_house():
     assert h.size() == 22
     assert len(h.rooms) == 3
     assert str(h) == '''House:
-bedroom, 10m
-kitchen, 9m
-bathroom, 3m'''
-
+    bedroom, 10m
+    kitchen, 9m
+    bathroom, 3m'''
 
 def test_palace():
     h = House()

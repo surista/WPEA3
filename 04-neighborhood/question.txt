@@ -1,0 +1,43 @@
+Over the last few weeks, we've managed to create houses containing rooms. We've even managed to limit the number of rooms that a house can contain, by indicating a house's maximum size.
+
+This week, we're going to extend this model, allowing us to put houses into a neighborhood. The idea is that you'll be able to create a neighborhood, and then add houses to it -- just as we can add rooms to a house.
+
+For example:
+
+    n1 = Neighborhood('Oak Valley)
+    n2 = Neighborhood('Mountain River')
+
+    n1.add_houses(h1, h2, h3)
+    n2.add_houses(h4, h5, h6, h7)
+
+It would be nice to know how much space all of the houses in a neighborhood are taking up. And so, just as we wanted to know how much space was being used by the rooms in a house, we also want to know how much space is being used in an entire neighborhood.  So there should be a "size" method on our "Neighborhood" class, which will return the total size used by all houses in that neighborhood.
+
+Again, this looks very similar to what we've done before, albeit at a higher level.
+
+The difference is that I would also like to know how much total space is being used by all of the homes, across all of our neighborhoods.
+
+That is: If n1 is 1000m and n2 is 2000m, then I'd like to be able to get the value of:
+
+    Neighborhood.total_size
+
+and have it return 3000.
+
+Note that "total_size" is a class attribute, and that it's data, not a method. And despite what I wrote yesterday about not wanting to duplicate data, there will be duplication here -- that is, "Neighborhood.total_size" should equal n1.size() + n2.size(), but it won't be calculated dynamically.  Rather, each time you add a new home to a neighborhood, the class attribute will need to be updated.  (We'll fix this down the road.)
+
+The point is to introduce you to the idea of class attributes, which are similar in many ways to the attributes we've been creating so far... and yet, they're also a bit different, and behave somewhat differently.
+
+Also: Once you have this working, here are a few questions to ponder and experiment with:
+
+(1) What's the difference between Neighborhood.total_size and Neighborhood.add_houses?  Are both attributes?  If so, then what's the difference between a data attribute and a method?  (Or is there any difference?)
+
+(2) What happens if you ask for n1.total_size or n2.total_size?  Does it work?
+
+(3) Can you set n1.total_size?  Does it affect Neighborhood.total_size?
+
+In my experience, it takes some time to get used to working with class attributes.  So if this week's assignment doesn't take long, that's fine -- but my guess is that it'll be weird enough for many of you that it's worth taking the time to think about it.
+
+I should note that attributes are a *CRITICAL* part of understanding Python, and understanding how Python searches for them is sorely under-explained.  I intend to remedy that!
+
+I'll be back on Monday with a solution.
+
+Reuven

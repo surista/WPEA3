@@ -1,0 +1,48 @@
+This week, we made our "House" class a bit more realistic, allowing it to contain a limited number of rooms. That is: When you add a room to the house, it won't automatically be added. Rather, if you try to add a room and there isn't enough space left over, the "add_rooms" method will raise a NotEnoughSpace exception.
+
+This required changing our "House" class, such that it takes an additional "available_space" argument. This argument will then be used to create and populate an "available_space" attribute on each instance of "House".
+
+Now, one way to go about this was to have "available_space" start off as the amount avaialble when the house is first constructed. Then, as rooms are added, you could reduce it. Once the "available_space" attribute goes down to zero, you can't add any more space in your house.
+
+But I decided to try a different technique, and to force it upon you in some ways via the automated tests. That's because we already had a "House.size" method, meaning that we could always calculate the total amount of space rooms are consuming.
+
+And this is an important point in object-oriented design: You don't want to have information duplicated. If you can calculate the total space either by adding up the rooms or by checking "available_space", you're likely to get thing messed up and unsynchronized at some point. And I can assure you, from bitter experience, that it'll be painful to fix such problems when they do crop up.
+
+So the basic idea is that "available_space" will describe the total, maximum space that rooms can consume in the house. As we add each new room, we'll check to see if there is enough space for it. If there is, then we'll add it to the house. And if not? We'll raise an exception.
+
+Now, many people equate "exception" with "error," and this is particularly unsurprising given that (a) most exception classes have "Error" in their names, (b) most exceptions are indeed indicative of errors, and (c) an unhandled exception causes a program to exit. And you can talk about how an "unhandled exception" isn't the same as a crash, but those comments will fall on deaf ears when your manager is asking you why the program halted in production.
+
+It's typical for us to trap exceptions with "try" and "except".  But it's totally fine, and even good, to raise exceptions on occasion -- indicating where something unusual or problematic is going on. You don't want to raise built-in Python exceptions, both because they can be mistaken for something else and because it's a big advantage to have specific and clear exceptions in your code.  Sure, you could look through the message to decide what the problem is, but in my experience, you're likely to identify and fix a problem much faster based on a clear and unique exception, rather than by reading the message that comes alongside a generic one.
+
+It turns out that creating an exception class is pretty trivial:
+
+    class NotEnoughSpaceError(Exception):
+        pass
+
+You define a class, make sure it inherits from "Exception", and give it an empty body (i.e., "pass").  Sure, you could add new attributes and methods, but why would you?  Exceptions have a standard API, and provide a particular set of data points about your program. Unless you have a really special kind of exception (e.g., the "re.error" exception class for regular expressions), no one is going to look beyond the exception class name and its message.
+
+How can you raise this exception? Well, you're creating a new object of type NotEnoughSpaceError. So you'll say:
+
+    raise NotEnoughSpaceError(
+        f'{one_item.name} needs {one_item.size}; only {self.available_space - self.size()} available')
+
+As you can see, I took advantage of the fact that the string used in the message can be an f-string, so that the message is as clear as can be.  I would argue that all error messages should be this clear and exact, or as precise as possible, indicating not just what value was received, but what was wrong with it.  Wouldn't you, as the person staring at the exception on the screen, want to know where and why something had gone wrong?
+
+When are we going to raise this exception? I'll admit that I had a pretty simple version in mind, although some in the forum raised (so to speak) some other and more sophisticated ideas: My assumption was that we would go through the new rooms, one at a time, trying to add them.  If we found that the new room wouldn't fit, then we would immediately raise an exception:
+
+    def add_rooms(self, *args):
+        for one_item in args:
+            if self.size() + one_item.size > self.available_space:
+                raise NotEnoughSpaceError(
+                    f'{one_item.name} needs {one_item.size}; only {self.available_space - self.size()} available')
+            self.rooms.append(one_item)
+
+Some people suggested that it would have been smarter to keep going, adding whatever rooms we could from those the user had passed.  An excellent idea!  Next time around, I guess.
+
+Notice that because we kept track of "available_space" as an attribute on the instance, each "House" object had its own space.  Adding a room to one house didn't modify the space in another house, which is the typical way that these things work.  This is precisely the idea behind attributes on an object: Each object has its own state, separate from other objects of the same type. The objects might have the same methods and attributes, but the content will be the same -- just as every person (normally) has two eyes, two ears, and a mouth, but all have different colors, sizes, and shapes.
+
+I'll be back tomorrow with another exercise that extends this one even further.
+
+Until then,
+
+Reuven

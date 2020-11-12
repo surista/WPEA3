@@ -1,0 +1,67 @@
+This week, we took a bit of a different turn, trying to tighten the screws a bit on our code in order to reduce potential errors.
+
+I used to scoff at the idea of static typing. I felt that it crimped my style, and took away from my freedom, as well as the lovely flexibility that a dynamic language like Python gave me.
+
+But I've come to understand just how important software reliability and maintenance are, and how much typing -- especially done right -- can improve our code over the long term. That, along with testing, really makes a difference.
+
+And so Mypy has turned me from a skeptic into an advocate. I still don't use Mypy in the bulk of my Python code, but I'm starting to think that I should. Moreover, I'm pretty sure that within a few years, most Python code will be Mypy ready, as it were.
+
+Many companies find that they want to take existing code and add Mypy support to it. This can be a hard thing to do, especially with a large code base.  I wanted you to see what's involved, on even a small scale, and start to get used to how it works -- including where it is both flexible and inflexible.
+
+First, let's discuss the syntax: You only need to specify the syntax for parameters.  Variables can be given type annotations, but they normally don't need that, because Mypy infers the type from the first assignment. Thus, if you first assign 'x=5' and then 'x="abc"', Mypy will complain, because you're switching types. And you don't need to set anything for that to work.
+
+You also need to indicate return types from methods. However, certain methods are treated specially. For example, "__init__" will always return None, so there's no need to state that explicitly.  I did so in my solution, but I can't decide if that makes me a perfectionist or a newbie in the Mypy world.
+
+You also don't need to annotate a type for "self", which will always (enforced by Python) be an instance of the class you're in the middle of defining.  Our "Room" class can thus be:
+
+    class Room():
+        def __init__(self, name: str, size: int) -> None:
+            self.name = name
+            self.size = size
+
+        def __str__(self) -> str:
+            return f'{self.name}, {self.size}m'
+
+As you can see, we're saying that the "name" will be a string, and the "size" will be an integer. I also indicate, as I mentioned above, that "__init__" doesn't return any value (since its job is to add attributes to an object) and that "__str__" returns a string... which might be obvious, but I'd rather be super clear and complete than not!
+
+This is a good point to mention that Python itself ignores these annotations completely. It's just Mypy and similar type-checking tools that care, and will raise a fuss.
+
+How are we going to define our "House" class?
+
+The "__init__" method will have a single annotated parameter, "available_space", which is an integer and has a default. That's fine. But how can we indicate that the "self.rooms" attribute, which is initialized as an empty list, should only contain "Room" objects?  The answer is that we use the "typing" module, which comes with Python, and use its "List" (note the capitalization) to indicate that we want to have a list of "Room" objects.  The method then looks like this:
+
+    def __init__(self, available_space: int = 100) -> None:
+        self.rooms: typing.List[Room] = []
+        self.available_space = available_space
+
+What about "add_rooms"?  The only parameter we need to annotate there is "*args". Now we know that "*args" is a tuple, and we want it to be a tuple that contains "Room" objects. You would thus think that we have to annotate it as "typing.Tuple[Room]".  But guess what?  Mypy knows that "*args" will be a tuple. And we thus annotate "*args" not with the whole thing, but rather just the type of object that the tuple will *contain*.  Given that we want the "*args" to contain "Room" objects, we can then define it as:
+
+    def add_rooms(self, *args: Room) -> None:
+
+Note that we also must indicate that the method returns "None", to satisfy Mypy's type checking.
+
+We'll need similar typing definitions in each of our subclasses of "House".  It's at times like this, when you find that you are repeating yourself, that you might come to the conclusion that this code needs to be DRY'ed up a bit -- that is, removing the repeated sections, and consolidating them.
+
+Finally, we get to the "Neighborhood" class. We're going to set "__init__" in a similar way to what we did with the "House" object:
+
+    def __init__(self) -> None:
+        self.houses: typing.List[House] = []
+
+And once again, we'll annotate "*args" using Mypy's magic, and indicate that "add_houses" returns None:
+
+    def add_houses(self, *args: House) -> None:
+
+What about the "size" method?  That'll return an integer, which we can indicate as follows:
+
+    def size(self) -> int:
+
+But what about "house_types"?  That's actually a tricky one to do.  First, it's tricky because we're using "Counter" in our annotation. And it turns out that there's a "typing.Counter" that we can use, designed for exactly this purpose. But as you might have discovered, Mypy can actually be a bit picky about these things. And even if you were thrilled to discover the "typing.Counter" annotation, that's not enough. We also need to indicate what types of values will be used as keys in our "Counter".  You can indicate this with "typing.Counter[str]".
+
+While this sort of thing is frustrating to discover, I've found that there's a consistency to the typing system, one which lets you almost guess as to how you would be annotating your parameters, even when you're not entirely sure.  Mypy has really impressed me with this thoughtfulness, and I hope that this exercise helped you to understand things better, too.
+
+Tomorrow, we'll start adding a few final touches to our homes.
+
+Until then,
+
+Reuven
+

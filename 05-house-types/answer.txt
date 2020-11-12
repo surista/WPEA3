@@ -1,0 +1,106 @@
+This week, we started to experiment with inheritance. I've often said that in my experience, many people who have taken a course in object-oriented programming are convinced that they should use inheritance all of the time. They see two classes, and are sure that one should inherit from the other.
+
+So part of my point in these exercises, and the ones that follow, will be to help you identify when you should (and shouldn't) be using inheritance.
+
+Remember that there are two types of relationships that classes can have with one another:
+
+- The "has-a" relationship means that one class contains another. We've seen lots of composition so far: Homes contain rooms, and neighborhoods contain homes.
+
+- The "is-a" relationship means that one class is just like another (parent) class.
+
+But wait a second: Surely there's more to it than that with an "is-a" relationship, right? After all, why inherit at all if the subclass will be the same as its parent class?
+
+The answer to this question brings up ICPO, the order in which Python searches for attributes: First on the instance, than on the class, then on the class's parent, and then up the chain until we get to "object", the top of the class hierarchy.
+
+The power of a subclass is that it can define any attributes it wants, including methods. If Python finds a method on the subclass, then it'll run that method, ignoring the method on the parent class.
+
+Thus: If a class "Foo" defines a "hello" method, and then the class "Bar" inherits from "Foo", we can still invoke the "hello" method on instances of "Bar".  But if we implement our own "hello" method on "Bar", then that method will be invoked -- and the parent method, "Foo.hello", will be ignored.
+
+One way to subclass is to re-implement all of the parent class's methods.  That's not the best way to go, because why would you block all of the parent's methods?  But you can also re-implement only some of them, leaving others on the parent.
+
+You can also mix things around a bit: If the method in the subclass wants to call the parent's method, it can use "super" to get a proxy object on which the method can be called.  We'll see some of this later in the course.
+
+Given all of this, what solutions did I propose for this week's questions?
+
+First, I asked you to create three new classes, each of which inherits from our "House" class. We can create three basic, skeletal subclasses as follows:
+
+    class SingleFamilyHouse(House):
+        pass
+
+    class TownHouse(House):
+        pass
+
+    class Apartment(House):
+        pass
+
+
+This creates three new subclasses of "House" that behave precise as "House" does, but which give us a bit of semantic difference. We can thus distinguish between different types of houses, but the behavior will be the same.
+
+I did say, however, that we should see two differences between our regular "House" class (which we can still use as a generic house) and these three new classes: First, these new classes will have different default sizes. In addition, when we print a house, we should see what type it is.
+
+To handle the first problem, we'll need to implement "__init__" ourselves, on each of the subclasses. That "__init__" will allow us to have a different default value for "available_space":
+
+    class SingleFamilyHouse(House):
+        def __init__(self, available_space=200):
+            self.rooms = []
+            self.available_space = available_space
+
+
+    class TownHouse(House):
+        def __init__(self, available_space=100):
+            self.rooms = []
+            self.available_space = available_space
+
+
+    class Apartment(House):
+        def __init__(self, available_space=80):
+            self.rooms = []
+            self.available_space = available_space
+
+
+Now, you could argue that given the repeated code in each of these "__init__" implementations, that we should actually have gotten the default and then passed the appropriate value to "Home.__init__".  I'd say that it's six of one, and half a dozen of the other; either way, it's going to offend my sensibilities a bit.  For now, I'm willing to go with a slightly less DRY ("don't repeat yourself") version that's easier to understand. But if you want, you can always say:
+ 
+   class SingleFamilyHouse(House):
+        def __init__(self, available_space=200):
+            super().__init__(available_space)
+
+    class TownHouse(House):
+        def __init__(self, available_space=100):
+            super().__init__(available_space)
+
+    class Apartment(House):
+        def __init__(self, available_space=80):
+            super().__init__(available_space)
+
+Notice that here I used "super()", which returns an object on which we can run our method. This is the best way to say, "I want to run my parent's method, but also do something special and different of my own."  You know, the way that kids always are regarding their parents.  We'll play more with "super" in the rest of the course, so if it doesn't quite make sense to you, that's just fine for now.
+
+I also wanted the "__str__" method to reflect the type of home we have. Here, I decided to use a different technique: Since the code would be the same for each of the subclasses, I decided to modify the parent class.  This isn't always possible; often, you're creating a subclass because you can't or won't modify the parent class.  But here, I'm giving us a bit more room to maneuver.  In this case, I decided to rewrite "Home.__str__" as follows:
+
+    def __str__(self):
+        output = self.__class__.__name__ + ':\n'
+        output += '\n'.join(str(one_room)
+                            for one_room in self.rooms)
+        return output
+
+Notice what I did here?  In the original version, the first line of the method hard-coded "House".  But here, I've grabbed the class name via "self", the current instance. No matter what type of house we have, the object will know its class, and can thus return its name as a string as I've done here.
+
+Finally, I asked you to return a dictionary (or a subclass of dict) that can count the number of houses of each type in our neighborhood, via a "house_types" method.
+
+Consider this: We already have a list of homes in our neighborhood, and each has a class.  Moreover, each class has a "__name__" that we can extract as a string.  So we could get a list of strings representing the classes as follows, with a list comprehension:
+
+    [type(one_house).__name__
+     for one_house in self.houses]
+
+So far, so good.  But we don't want a list. We want a dict, or something like it. One of my favorite data structures in Python is the "Counter", which is a subclass of dict, which counts the number of times each element appears. We can thus do the following:
+
+    def house_types(self):
+        return Counter(type(one_house).__name__
+                       for one_house in self.houses)
+
+What will our user get back?  A dict (well, a Counter, but that's good enough here) that shows how many times each house type appears. I've also used a generator expression here, rather than a true list comprehension, to save a bit of memory.
+
+We can now create true neighborhoods with different types of homes.  Tomorrow, we'll extend this more, making the distinctions between our house types even clearer.
+
+Until then,
+
+Reuven

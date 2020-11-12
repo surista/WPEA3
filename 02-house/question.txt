@@ -1,0 +1,15 @@
+How can objects interact?  This week, we'll be looking into how one object can contain another object. That's an idea known as "composition." And while this term doesn't get nearly as much love or attention as another term, "inheritance," it's probably even more important -- that's because everything in Python is an object, so *every* time we assign to an attribute, we're using composition.
+
+Last week, we created a class that represented a room. This week, we'll be creating a new class, House. A house (i.e., an instance of the "House" class) can contain any number of rooms.  We add rooms to a house (which always starts empty) with the "add_rooms" method, which takes one or more rooms as arguments. We should then be able to get the total size of the house by calling the "size" method on a house object; that will return the total of all of the rooms' sizes.
+
+In addition, turning the house into a string (via the "__str__" method) should return a string that starts with the word "House", followed by a list of the rooms, one per line. 
+
+On the object-oriented front, there isn't anything new this week.  But you might well want to use a list comprehension; if you're new or inexperienced with them, I suggest reading this blog post:
+
+    https://lerner.co.il/2015/07/16/want-to-understand-pythons-comprehensions-think-like-an-accountant/
+
+Questions or comments? Let's talk in the forum!
+
+I'll be back on Monday with the solution.
+
+Reuven

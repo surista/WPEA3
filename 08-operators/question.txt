@@ -1,0 +1,35 @@
+Part of the point of object-oriented programming is that our new objects will fit into familiar paradigms, reducing our cognitive load.  For example, we know that we can add numbers with +, so it makes sense that Python lets us add strings, lists, and tuples with +.
+
+Wouldn't it be nice for our objects to support +, as well?  For example, I'd like to add rooms to a house with:
+
+    one_house = one_house + one_room
+
+Or
+
+    one_neighborhood = one_neighborhood + one_house
+
+Python supports this behavior via a number of "magic methods." We've already implemented "__str__"; when you implement this magic method, Python knows what to do when you want to turn an object into a string, typically by running "str" on it.
+
+But there are lots of other magic methods, as well: If you implement "__len__", then the builtin "len" function can return a value for your object.  If you implement "__getitem__", then your objects can be accessed with square brackets, just like a string, list, tuple, or dictionary.
+
+If you add two objects ("a + b"), then Python actually calls the "__add__" method. Just as adding two strings creates a new string, and adding two lists returns a new list, adding objects should (in most cases) return a new object.
+
+If you use the "+=" operator, then Python first looks for the "__iadd__" ("inplace addition") method. If it finds that, then it uses it. If not, then it uses the simple "__add__" method, in conjunction with assignment.
+
+This week, I want you to implement the "+" operator on both the "House" and "Neighborhood" classes, such that you can add a new room to a house with "+" (rather than "add_rooms"), and you can add a new house to a neighborhood with "+" (rather than "add_houses").
+
+Here are some introductions to magic methods in Python:
+
+- https://www.python-course.eu/python3_magic_methods.php
+- https://rszalski.github.io/magicmethods/
+
+And here's a blog post that I wrote a few months ago, based on an interesting discovery that I had:
+
+https://lerner.co.il/2019/06/06/why-do-python-lists-let-you-a-tuple-when-you-cant-a-tuple/
+
+(Don't worry about "iadd", let alone "radd", for this week.  And don't worry about error checking, either.  We'll deal with those next week.)
+
+I'll be back with a solution on Monday.
+
+Reuven
+

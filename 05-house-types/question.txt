@@ -1,0 +1,31 @@
+As things stand in our housing universe, all of the homes are of the same type. They might be bigger or smaller, and might contain different numbers of rooms -- but they are all basically the same type of house.  
+
+The time has come to change that.  We're going to create a number of different types of homes:
+
+    - SingleFamilyHouse
+    - TownHouse
+    - Apartment
+
+Each of these will inherit from the "Home" class that we have been building.
+
+In practice, this means that you're going to have to create three new classes, named as I did above. Each class will inherit from the "Home" class that we've already created.
+
+For now, instances of these new home types will work almost exactly like the plain "Home" class does: We create them in the same way, we can run the same methods on them, and we can generally expect the same attributes to exist on them. Moreover, we can add these types of home to a neighborhood -- and when we ask the neighborhood to calculate its total size, it'll work with our "Home" objects just as before.
+
+Now, how does each of these classes differ from the base "House" class?  In two ways:
+
+(1) The default space available for each type of house should be different.  I'm going to say that a SingleFamilyHouse will have a default size of 200m, a TownHouse will have a default size of 100m, and an Apartment will have a default size of 80m.  (If you needed proof that I would make a lousy real-estate agent, now you have it!)
+
+(2) The __str__ method will reflect the type of house when printed out.  There are several ways to do this; try first to do so with a new method, and then (if you can) by modifying "House.__str__" to work universally with all classes.  Hint: Every object's class is available via "self.__class__", and the class name is available via "self.__class__.__name__".
+
+But hey, let's not forget our "Neighborhood" object: I'd like to add a new method, "house_types", which will return a dictionary whose keys indicate the types of homes in the neighborhood, and the values will be the number of each type of home. So if there are three apartments and four single-family homes, you'll have a dictionary that looks like {'Apartment':3, 'SingleFamilyHouse':4}. Note that if there are zero of any type, you don't need to include them.  Hint: Check out the "Counter" class in the "collections" module, which returns a dictionary based on a sequence.  This might be tricky!
+
+What we're doing here is dipping our toes into the water of inheritance, seeing how we can create new classes with similar-but-distinct functionality. Moreover, we're seeing different ways in which methods in a subclass can interact with methods in the base class.
+
+The "super" builtin function will come in handy this week. Using "super" can be a bit tricky, but for our particular cases, it should be fairly straightforward. 
+
+    https://docs.python.org/3/library/functions.html#super
+
+I'll be back on Monday with a solution.  Until then,
+
+Reuven

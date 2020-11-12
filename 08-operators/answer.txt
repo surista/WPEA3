@@ -1,0 +1,87 @@
+This week, we added support for the `+` operator to two of our classes.  This is one of the more common "magic methods" that you can implement in Python, adding support for built-in operators for our objects.
+
+Let's review: Part of Python's attractiveness is the consistency of the language. Want to retrieve an individual element from a collection?  Use `[]`. Want to check the length of an object? Use `len`. Want to combine two objects together? Use `+`.
+
+The "magic" in "magic methods" means that an object can support these operations by implementing certain methods. You can think of it as implementing a callback, a function that is invoked automatically by the system. If someone invokes `[]` on an object, Python looks for `+++__getitem__+++`. If someone invokes `len` on an object, Python looks for `+++__len__+++`. And if someone invokes `+` on an object, Python invokes `+++__add__+++`.
+
+In other words: If you want your objects to support `+`, you'll need to implement `+++__add__+++`. The method will have two parameters: `self`, which (as always) represents the current instance, and `other`, which will represent the item with which it's being added.
+
+In other words, if you say:
+
+    a + b
+
+Python converts this into:
+
+    a.__add__(b)
+
+This is why you get different error messages in Python if you add
+
+    1 + '1'   # int + str
+
+and
+
+    '1' + 1   # str + int
+
+(Try it; it took me years to discover this!)
+
+The first part of this week's assignment was to support `+`, such that we could add a room to a house and get a new house object back. Note that I *didn't* want the `+` operator to modify the house object. That's because Python's convention is that `+` doesn't change the original object, while `+=` (which you can implement with `+++__iadd__+++`, the "inplace addition" operator) does.
+
+Here's an initial implementation of `+++__add__+++`:
+
+    def __add__(self, other):
+        output = House(self.available_space)
+        output.rooms = self.rooms
+        output.rooms.append(other)
+        return output
+
+In other words: We create a new `House` object. We then copy all of our rooms to `output`. (Yes, this means that we'll have some room objects shared between the two houses. In some cases, it's better to use a "deep copy" method to avoid this overlap, but I'll ignore it for now.)  Finally, we add the new room (`other`) to `output`, and return it.
+
+This does the job, but we also have to take into account the possibility that our new house won't have enough space for the new room. So we should add some checking there:
+
+    def __add__(self, other):
+        if self.size() + other.size > self.available_space:
+            raise NotEnoughSpaceError(
+                f'{other.name} needs {other.size}; only {self.available_space - self.size()} available')
+        output = House(self.available_space)
+        output.rooms = self.rooms
+        output.rooms.append(other)
+        return output
+
+Finally, I'd like to add some Mypy-style type checking. But you might have run into some problems in doing so. That's because we're defining this `+++__add__+++` method in the `Room` class, which comes before the definition of the `House` class. This means that the global name `House` isn't yet defined when we are defining `Room`, which means that we cannot say that `+++__add__+++` returns an instance of `House`. If you try to do that, you'll get errors.
+
+The solution is to use a Mypy trick: Remember that annotations in Python can be any.object. They don't have to be classes. So you can use a string, containing the name of the class you want to use, but which hasn't yet been defined.  In other words:
+
+    def __add__(self, other: Room) -> "House":
+        if self.size() + other.size > self.available_space:
+            raise NotEnoughSpaceError(
+                f'{other.name} needs {other.size}; only {self.available_space - self.size()} available')
+        output = House(self.available_space)
+        output.rooms = self.rooms
+        output.rooms.append(other)
+        return output
+
+If you want to implement `+++__iadd__+++`, then you would make the modification to `self`, and then return `self` as well. Part of the convention of in-place operators is that they both modify and return values.
+
+As an aside, note that strings in Python are immutable, but still support `+=`. Does this mean that they are somehow mutable? No; in this case, we are getting back a new string whose contains reflect the combined contents of the two inputs. But it's so useful to have `+=` work on our strings that Python uses the same API. And for the most part, this works just fine -- so long as you don't concatenate too many large strings in a row, which can lead to some memory shortages because of the constant allocation of new memory.
+
+What about our implementation of `Neighborhood.+++__add__+++`?  Our implementation will be quite similar:
+
+    def __add__(self, other: House) -> "Neighborhood":
+        output = Neighborhood()
+        output.houses = self.houses
+        output.houses.append(other)
+        Neighborhood.total_size += other.size()
+        return output
+
+Note that here, we're not checking the total size, because there is no limit to our neighborhood size. Rather, we're just adding to our class attribute.
+
+As before, we use a string to ensure that Mypy is satisfied by our type checking.
+
+And with that in place, we've added some operator magic!
+
+The time has almost come to wrap up our housing development. Tomorrow, we'll do a final exercise that'll point to some more object-oriented functionality you'll want to use in Python.
+
+Until then,
+
+Reuven
+

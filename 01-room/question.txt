@@ -1,0 +1,60 @@
+Hello, and welcome to Weekly Python Exercise! This course has the code A3, but is better known as "Objects for beginners."
+
+The idea is that every Tuesday, I'll send you e-mail (like this one) with a new problem. Sometimes, it'll be a standalone question -- but in many cases, it'll be part of a longer set of exercises, broken up across a number of weeks.
+
+The questions will be accompanied by a bunch of tests, which you can then run in "pytest".  My general assumption is that the solution will be in a file called "solution.py", and the tests will reflect this.
+
+Because this is a beginner-level course, I'll also be providing you with some reading material on the subject of the current week.  My assumption is that you don't know a lot about object-oriented programming; while some (much) of the reading will be practical, but if I find something a bit theoretical or philosophical about objects, I might throw it in, as well.
+
+I've also set up (and you should have received an invitation to) a private forum. Only people in this cohort have access to the forum. I'll be setting up a new topic each week, in which we can discuss the latest exercises.  Note that if you post code (and you should!), please try to hide it using the appropriate tools, so that we cannot read the code without clicking on it.
+
+I think that covers things -- but if not, please ask (and tag it with @reuven) in the forum!
+
+Without further ado, here's this week's problem:
+
+The whole point of object-oriented programming is that instead of having functions (verbs) in one corner and data (nouns) in another, we join them together. Any action that we want to execute takes place by asking an object to run it for us. While they're similar in many ways to functions, the actions we perform on an object is known as a "method."
+
+But where are methods defined? On "classes," new data types that we define. So a Python string knows the "upper" and "split" methods, because they're defined on the "str" class. And a Python list knows the "pop" and "append" methods, because they're defined on the "list" class.
+
+Thus: Before you can create objects of type X, you need to define a class X. Inside of that class will be one or more method definitions.  You can then create new instances of class X, each of which will have its own attributes.
+
+If this sounds straightforward, then great!  I've often found that people make object-oriented programming far harder than it needs to be. One of the big problems is the terminology, which doesn't match up with the rest of the programming world. There are also some style and syntax differences with regular (procedural) programming, but I'm sure you'll catch on soon enough.
+
+This week, we're going to create a Room class. The idea is that this will describe a room in a house. The room will have two attributes, or qualities: A name, and a size.
+
+For example, if I want to create a new office, I can just say:
+
+    my_office = Room('office', 10)
+
+The above creates a new room with a name ('office') and a size (10 square meters), and then puts that new object ("instance") in the variable "my_office".  I can then ask the office for its name or size:
+
+    print(my_office.name)   # returns "office'
+    print(my_office.size)   # returns 10
+
+If you are in a country that doesn't use square meters to measure area, then I'll allow you to use your quaint, provincial measurements instead.
+
+Finally, I want you to define the "__str__" method on our object, such that we'll get back a string that describes the room.  For example, if I write:
+
+    print(my_office)
+
+we'll see the following printed out:
+
+    office, 10m
+
+We will be building (no pun intended) on this "Room" class over the next few weeks, so stay tuned!
+
+If you are new to objects in Python, then here's an article that can walk you through many of the things we're going to discuss and learn here:
+
+    https://www.datacamp.com/community/tutorials/python-oop-tutorial
+
+Here is another (longer and deeper) article, which might be better once you've gotten your grounding:
+
+    https://realpython.com/python3-object-oriented-programming/
+
+If you have some experience with object-oriented programming, but not with Python, then you might enjoy this attack on Java written by Steve Yegge a number of years ago. It's not totally accurate (or up to date), but it's an interesting take on the world of objects, and is great food for thought:
+
+    https://steve-yegge.blogspot.com/2006/03/execution-in-kingdom-of-nouns.html
+
+I'll be back on Monday with a solution, and hope that you'll introduce yourself in the forum!
+
+Reuven

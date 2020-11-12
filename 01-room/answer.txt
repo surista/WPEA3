@@ -1,0 +1,84 @@
+This week, we started off by creating a simple Python class. Indeed, you could argue that what we wrote here is pretty much a classic template of a class.  Whenever you create a class in Python, you'll likely be using code that looks very similar to what we did this week.  (Unless you use the new "dataclasses" feature that came with Python 3.7, which we'll look at toward the end of the course.)
+
+Remember that the "class" statement starts a block that defines a new data type in Python. You don't *have* to create classes in Python; you can always stick with the built-in data types and write plain ol' functions. The main reason to define classes is to work at a higher level of abstraction.
+
+The analogy I often use is to a car: When you drive a car, you don't want to -- actually, you *can't* -- keep track of all of the parts and processes that are taking place as you drive. Even thinking about how you car is working will make it harder for your to drive. By thinking at a higher level of abstraction, about a single entity known as a "car," allows you to drive.
+
+Moreover, you can then use that "car" idea and think at a higher level as a result. Imagine trying to think about a traffic jam not as a collection of cars, but by describing all of the mechanical processes taking place. You'll never be able to do it.
+
+And so, object-oriented programming doesn't have technical advantages. Rather, it has both organizational and semantic advantages, allowing you to keep track of your code and think about it in newer and better ways.
+
+Creating a new class requires the keyword "class", followed by the name of the class you want to create. Traditionally, we name classes with an initial capital letter in Python, using "camel case" for the rest of the words.  In Python 2, we then had to put the word "object" between parentheses following the class name; you don't have to do it in Python 3, but dinosaurs like me will do it anyway.
+
+And then what? Well, we could just close the class definition with "pass", which indicates that we don't have anything more to say:
+
+    class Room:
+        pass
+
+But of course, we are going to want a bit more. Specifically, I indicated that we're going to want to assign two different attributes to our object. Now, the way that we do that in Python is with the "__init__" method, as follows:
+
+    def __init__(self, name, size):
+        self.name = name
+        self.size = size
+
+There are several things to realize about this method:
+
+(1) It's *not* the constructor. That job is done by the "__new__" method, which you'll almost never want to write.  Rather, "__init__" is the method that's called after "__new__" creates a new object. The job of "__init__" is to add attributes to the new object.
+
+(2) In this case, we're adding two attributes, "name" and "size", to "self".  "self" is a local variable that refers to the new "Room" object that was just created. "__init__" is called just before the new object is returned to whoever created the new object.
+
+(3) Python doesn't support "private" or "protected". All attributes are visible to the outside world.
+
+(4) The attributes are only added to the new "Room" object when the "__init__" method actually runs. Unlike many other languages, class definitions aren't declarations, indicating what fields will be on each object. Rather, our "__init__" method needs to add them, one by one.
+
+Notice, as always in Python, that we don't (and can't) assign a type to our fields. Whatever we get from the caller is what will be assigned. True, we can use Python 3's type annotations, in conjunction with a type-checking system such as MyPy, to double check such things, but the Python language itself won't care or notice.
+
+What about "self"? If you're new to Python objects, then you might think that it's just a strange way of saying "this". But no matter what, you might think that it's an annoying and unnecessary parameter to define; after all, can't Python just figure out what object you're in on its own?
+
+The answer, as always, is "yes and no." Sure, Python *could* have used the word "this", except that it took ideas from Smalltalk, and that language used the word "self" instead. Note that while "self" is a reserved word in Smalltalk, it's a convention -- but not a special word -- in Python. Everyone follows this convention, though, so don't think that you can get away with calling that special variable "this".
+
+And why do we need to get "self" as a parameter, and then use it when assigning to (or retrieving from) our attributes? Can't we just say:
+
+    name = name
+
+First of all, I hope you can already see that this would cause a bit of a syntactic problem. But beyond that, it's important that we include "self" so that we can distinguish between attributes (i.e., objects attached to other variables) and variables (which are pretty much independent, and exist in a namespace -- global or local).
+
+But there's another reason why "self" is both needed and special: The LEGB rule for variable lookup in Python requires it. If we give a name "x", then Python looks in the local, enclosing, global, and builtin scopes, in that order. If Python were to make "self" magical, in that it would always know where it is located, then it would have to fit into (i.e., before or after) one of those other scopes. And that would make things more complex. So yes, having "self." at the start of every attribute read or write is annoying... but it's better and clearer than the alternatives, and reduces ambiguity.
+
+So we have our "__init__" method, and it's going to set up our attributes. What about getters and setters, methods that will let us retrieve and set our attributes? We don't need them in Python, and typically don't define them.
+
+Rather, we access the attributes directly.  So I can say:
+
+    r = Room('bedroom', 15)
+    print(r.name)
+    print(r.size)
+    r.size = 18     # added 3m to the bedroom
+    print(r.size)
+    
+    
+Notice that I'm simply retrieving the attributes, without the need for any methods.
+
+In my experience, people who come from other languages or who studied object-oriented programming in a university course are shocked and a bit horrified by this.   But if you think about it, this actually makes sense: First of all, we often retrieve attributes from objects in Python, without resorting to method calls. Second, if all of our attributes are public, then why not?
+
+So while you can define getters and setters, you almost certainly won't want to do so.
+
+Finally, it's pretty typical to define a "__str__" method on every class. This defines how objects will be represented as strings. That is, if I say:
+
+    str(r)
+
+then what should I get back? The default, defined on the "object" class, is pretty ugly and boring, so you'll almost certainly want to write this method. So long as it returns a string, the method can do whatever it wants.  In our case, we'll use an f-string to return something a bit more readable and nice than the default:
+
+    def __str__(self):
+        return f'{self.name}, {self.size}m'
+
+We'll get back to "__str__" and other "magic" methods over the coming weeks. But our "room" class is now defined, and we can start to use it in other projects and classes.
+
+And indeed, starting tomorrow, we'll do just that!
+
+Until then,
+
+Reuven
+
+
+
+

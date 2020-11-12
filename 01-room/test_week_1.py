@@ -6,9 +6,7 @@ Oct 2020
 Module documentation goes here
 """
 
-
 from week_1 import Room
-
 
 def test_simple():
     my_office = Room('office', 10)

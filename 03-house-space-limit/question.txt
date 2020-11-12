@@ -1,0 +1,37 @@
+Last week, we saw how easy it is to build a house -- not only that, but you can do so on time and under budget without too much trouble. Take that, real world!
+
+Our "House" class differed from the real world in another way: We could add any number of rooms to it. Normally, when you build a house, you can't add infinite rooms; you're limited by the amount of space on that plot of land. So if the house is 100 square meters, you can add two 50-meter rooms, or four 25-meter rooms, or 10 10-meter rooms. (We're ignoring hallways and such here.)
+
+This week, we're going to add some restrictions to our house. When you create a new instance of "House", you will give it a size. As you add rooms to the house using the "add_rooms" method, you'll want to check if you've gone over this limit. If so, then you'll want to raise a NotEnoughSpace exception.
+
+For example:
+
+    h = House(100)
+    r1 = Room('master bedroom', 25)
+    r2 = Room('bathroom', 5)
+    r3 = Room('living room', 30)
+    r4 = Room('kitchen', 20)
+
+    h.add_rooms(r1, r2, r3, r4)
+    print(h.size)   # returns 80
+
+    h.add_rooms(r1) # try to add another master bedroom
+
+This final line should result in a NotEnoughSpaceError exception, with the message saying how much space the new room requires, and how much space actually remains.
+
+Note that in order to maintain backward compatibility, we'll allow the user to ignore the "available_space" attribute when creating the "House" object. That'll result in a default value of 100 being used.
+
+This week's exercise is meant to show you a few things:
+
+(1) How to use attributes for sanity and accuracy checking in your objects,
+(2) How to modify a class definition, so that you can add new functionality, and
+(3) How to define new exception classes, and then use them to indicate there's a problem
+
+Next week's exercise will take this idea in a new and different direction, so it's important that you understand that every "Home" object has its own "available_space" attribute, and that it isn't shared across different objects.
+
+I'll be back next week with a solution an explanation.
+
+Until then,
+
+Reuven
+

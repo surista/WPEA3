@@ -1,0 +1,231 @@
+
+This week, we're wrapping up our housing system with a simple query system. Now, there are lots of ways to query your data, all the way from a full-blown query language like SQL, to something equivalent like Pandas, to something a bit simpler.
+
+I went for the simpler option this week, but if you want to implement SQL in your spare time, I won't stop you.
+
+Simply put, I wanted to make it possible for us to find all of the homes with a room that matched a set of name-value pairs. The name-value pairs were to be passed as keyword arguments -- meaning, arguments in the "name=value" format that we so often see in Python programs. If the "name" in that pair matches an existing parameter, then the value is attached to it. But if the "name" doesn't match an existing parameter, then Python will throw an error, *unless* the function has been defined with a "**kwargs" parameter.
+
+"**kwargs" accepts all keyword arguments, and turns them into a dictionary. The "**" is mandatory for Python to accept  keyword arguments that don't match a parameter, and "kwargs" is the traditional name we give to the dictionary that will be populated with the name-value pairs.
+
+So what I wanted was a method, defined on the "Neighborhood" class, that would return all of the homes with matching rooms.
+
+This means that we'll need to do the following:
+
+    Accept the keyword arguments in a dictionary
+    Look through all of the homes in the neighborhood
+    Look through all of the rooms in each home
+    If even one room matches the parameters we set out, then we will want to include the home
+    We'll return a set of homes, to ensure that each home appears just once.
+
+
+While it might not seem obvious, the solution here is to use a comprehension. Not just a comprehension, but a *set* comprehension. And not just a set comprehension, but a *nested* set comprehension.
+
+Let's step back, and see how we can do this.
+
+First, how can we compare a dictionary with an object's attributes? There are a variety of ways in which we can do this, but the easiest (I think) is to use the built-in "vars" function, which I often find so useful. Whereas "dir" returns all of the attributes available via an object, including its class and inheritance, "vars" only returns the attributes defined directly on the object itself. So if I have an object, and I run vars on it:
+
+    vars(h)
+
+
+I'll get a dictionary of name-value pairs, in which the names are strings with the attribute names, and the values are whatever values are set.
+
+The key (and value, you could say) is thus to compare our "kwargs" dictionary with the result of "vars" on an individual room object. Any room for which "kwargs == vars(one_room)" matches our condition.  Notice that this is a far less sophisticated kind of query than what Pandas and SQL provide.  But hey, it's not a bad start, right?
+
+Now that we know how we can compare "kwargs" with a room, how can we go from the Neighborhood object, containing one or more houses, to comparisons with a number of "Room" objects?  The solution is a nested comprehension, perfect for unwinding this kind of nested Python data structure, and producing a new data structure based on it.
+
+A comprehension usually has the form
+
+    EXPRESSION
+    ITERATION
+    CONDITION
+
+
+For example:
+
+    [one_number ** 3
+     for one_number in range(10)
+     if one_number % 2]
+
+
+In other words: We'll iterate over the numbers 0-9, inclusive (iteration). We'll then check if the number is odd (condition). If so, then we'll output that number to the 3rd power (expression).  In the above case, we used square brackets, so it's a list comprehension, and we'll return a list.
+
+In a nested comprehension, we have at least one additional "for" loop. It doesn't have to iterate over the result that we got from the first "for" loop, but it's pretty common to do so. The expression in the first line is then invoked once for each of the *second* loop's iterations. For example:
+
+    [(x,y)
+     for x in range(10)
+     for y in range(x)]
+
+
+We'll first have x iterate from 0-9. But our output won't come from the first loop; rather, it'll come from the second one. And the second one, which is always invoked based on the first, will go from 0 until x-1, whatever that currently is.  The output will reflect how many iterations we had on y, rather than on x.
+
+We can take advantage of that here, by iterating first over the neighborhood's houses, and then over each house's rooms:
+
+    [one_house
+     for one_house in self.houses
+     for one_room in one_house.rooms]
+
+
+But of course, this will return every single room in every single house. We want to restrict the output, so that only houses matching our query will be returned.  We thus add a condition:
+
+    [one_house
+     for one_house in self.houses
+     for one_room in one_house.rooms
+     if vars(one_room) == kwargs]
+
+
+Now, our output will only include homes containing a matching room. But what happens if a house contains two identical rooms, and both match our query?  Then the house will be returned twice.
+
+The solution there is to use a Python set, one of my favorite data structures. A set is just like the keys in a dictionary -- the elements are guaranteed to be unique, and the fact that they're hashable means that we can search for them in very little time.
+
+Best of all: If we change the brackets to curly braces, we'll have created a set comprehension, which returns a set based on its contents.  Our method definition will thus look like this:
+
+    def find_with_room(self, **kwargs):
+        return {one_house
+                for one_house in self.houses
+                for one_room in one_house.rooms
+                if vars(one_room) == kwargs}
+
+
+The one complication might have been with Mypy. (If you didn't use it, that's OK.) Mypy treats "**kwargs" specially, ensuring that the keys are of a particular type. So you can just say "**kwargs: str" to indicate that all of the keys should be strings.
+
+Because our method returns a set of "House" objects, I had to use the special "Set" class from the "typing" module, and then use square brackets to indicate that the elements of our set would be instances of "House". And of course, anything that inherits from "House" is also considered to be a "House". The final version is thus:
+
+    def find_with_room(self, **kwargs: str) -> typing.Set[House]:
+        return {one_house
+                for one_house in self.houses
+                for one_room in one_house.rooms
+                if vars(one_room) == kwargs}
+
+
+What do you think?
+
+I'll be back tomorrow with a new series of object-oriented exercises to get you thinking in some new directions, and to get additional practice with the basics we've discussed here.
+
+Reuven
+ 
+
+#!/usr/bin/env python3
+
+from collections import Counter
+import typing
+
+
+class NotEnoughSpaceError(Exception):
+    pass
+
+
+class Room():
+    def __init__(self, name: str, size: int) -> None:
+        self.name = name
+        self.size = size
+
+    def __str__(self) -> str:
+        return f'{self.name}, {self.size}m'
+
+
+class House():
+    def __init__(self, available_space: int = 100) -> None:
+        self.rooms: typing.List[Room] = []
+        self.available_space = available_space
+
+    def add_rooms(self, *args: Room) -> None:
+        for one_item in args:
+            if self.size() + one_item.size > self.available_space:
+                raise NotEnoughSpaceError(
+                    f'{one_item.name} needs {one_item.size}; only {self.available_space - self.size()} available')
+            self.rooms.append(one_item)
+
+    def size(self) -> int:
+        return sum(one_room.size
+                   for one_room in self.rooms)
+
+    def __str__(self) -> str:
+        output = self.__class__.__name__ + ':\n'
+        output += '\n'.join(str(one_room)
+                            for one_room in self.rooms)
+        return output
+
+    def calculate_tax(self) -> float:
+        return self.size() * 100
+
+    def __add__(self, other: Room) -> "House":
+        if self.size() + other.size > self.available_space:
+            raise NotEnoughSpaceError(
+                f'{other.name} needs {other.size}; only {self.available_space - self.size()} available')
+        output = House(self.available_space)
+        output.rooms = self.rooms
+        output.rooms.append(other)
+        return output
+
+
+class SingleFamilyHouse(House):
+    def __init__(self, available_space: int = 200) -> None:
+        self.rooms: typing.List[Room] = []
+        self.available_space = available_space
+
+    def calculate_tax(self) -> float:
+        s = self.size()
+        if s <= 150:
+            return s * 100 * 1.2
+        else:
+            return (150 * 100 * 1.2) + ((s - 150) * 100 * 1.5)
+
+
+class TownHouse(House):
+    def __init__(self, available_space: int = 100) -> None:
+        self.rooms: typing.List[Room] = []
+        self.available_space = available_space
+
+    # no implementation of calculate_tax; we'll just use the inherited version
+
+
+class Apartment(House):
+    def __init__(self, available_space: int = 80) -> None:
+        self.rooms: typing.List[Room] = []
+        self.available_space = available_space
+
+    def calculate_tax(self) -> float:
+        return super().calculate_tax() * 0.75
+
+
+class Neighborhood():
+    total_size = 0
+
+    def __init__(self) -> None:
+        self.houses: typing.List[House] = []
+
+    def add_houses(self, *args: House) -> None:
+        for one_house in args:
+            self.houses.append(one_house)
+            Neighborhood.total_size += one_house.size()
+
+    def size(self) -> int:
+        return sum(one_house.size()
+                   for one_house in self.houses)
+
+    def house_types(self) -> typing.Counter[str]:
+        return Counter(type(one_house).__name__
+                       for one_house in self.houses)
+
+    def calculate_tax(self) -> float:
+        return sum(one_house.calculate_tax()
+                   for one_house in self.houses)
+
+    def __add__(self, other: House) -> "Neighborhood":
+        output = Neighborhood()
+        output.houses = self.houses
+        output.houses.append(other)
+        Neighborhood.total_size += other.size()
+        return output
+
+    def find_with_room(self, **kwargs: str) -> typing.Set[House]:
+        return {one_house
+                for one_house in self.houses
+                for one_room in one_house.rooms
+                if vars(one_room) == kwargs}
+
+Questions? Comments? Problems? The Weekly Python Exercise forum is at http://forum.lerner.co.il/. To get Reuven's attention, be sure to tag your message with @reuven.
+To make sure you keep getting these emails, please add reuven@lerner.co.il to your address book or whitelist us. Want out of the loop? Unsubscribe.
+
+Our postal address: 14 Migdal Oz Street, Apt. #1, Modi'in 71703 Israel
+

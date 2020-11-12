@@ -1,0 +1,118 @@
+This week, we added another class to our home-building object system, with a "Neighborhood" class.
+
+The first part of this week's assignment was fairly straightforward: I asked you to create a new class into which we could put "Home" objects. That is: Just as we can put many instances of "Room" in an instance of "Home", we can also put many instances of "Home" in an instance of "Neighborhood."
+
+There were other parallels, too: I wanted you to implement a "size" method on the neighborhood, which would return the combined size of all "Home" objects in the neighborhood.
+
+This implementation would look like the following code:
+
+    class Neighborhood():
+
+        def __init__(self):
+            self.houses = []
+
+        def add_houses(self, *args):
+            for one_house in args:
+                self.houses.append(one_house)
+
+        def size(self):
+            return sum(one_house.size()
+                       for one_house in self.houses)
+
+
+As you can see, we create a new "Neighborhood" class. This class doesn't inherit from either "Home" or "Room" -- and we'll be talking more about inheritance in the coming weeks, but we haven't discussed it directly yet. So "Neighborhood", like all classes in Python, inherits from "object" by default.  But again, we don't need to think about inheritance just yet.
+
+Then we add three methods that are pretty similar to those we created for "House":  The "__init__" method creates a new "Neighborhood" object and adds a new, empty "self.houses" list.  The "add_houses" method takes any number of arguments, and adds them (one by one) to "self.houses".  And the "size" method returns the sum of all objects in the "self.houses" list.
+
+So far, so good. But then I asked you to do something else, namely keep track of the total amount of space consumed by *all* instances of "Neighborhood". In other words, after creating several neighborhoods and adding homes to each of them, I should be able to ask for "Neighborhood.total_size", and get the total size of *all* neighborhoods created to date.
+
+This turns out to be a bit tricky, both in concept and in execution. But it also points to the consistency of attributes in Python, how they are looked up, and how we use them.
+
+In many languages, we talk about "classes" as the factories, or blueprints, for creating objects. So if you want a new "Person" object, you use the "Person" class, which describes how a new "Person" object will look and behave. if you want a new instance of "Car", then the "Car" class describes how such objects will behave. And so forth.
+
+All of this is true in Python, as well. But there is one difference: Classes are objects, too! They aren't just blueprints. They're objects, which means that they have a type, and they have attributes.
+
+Wait a second: If classes are objects, and have a type... what are they instances of?
+
+Answer: They are instances of "type". That's right; when you create a class, you're actually creating a new object of type "type". Just like "str", "dict", and "list", all of which are classes, and thus objects of type "type".
+
+Moreover: We've seen that we can add attributes to our object via the "self" parameter in "__init__".  But of course, we can add any attribute to any object we want, just with assignment.  Assuming that there's an object "a" in Python, I can say:
+
+    a.b = 'hello'
+
+and sure enough, a new attribute named "b" with a value "hello" will be added to the "a" object.
+
+So as you can probably gather, we could create our "Neighborhood" class, and then right afterwards say:
+
+    Neighborhood.total_size = 0
+
+And then we could modify "add_houses" to look like this:
+
+    def add_houses(self, *args):
+        for one_house in args:
+            self.houses.append(one_house)
+            Neighborhood.total_size += one_house.size()
+
+Will this work?  Yes, it will!  If you do all of this, then the tests will pass.
+
+But that's not quite good enough for me, because the syntax is really gross.  Do we really want to be adding the "total_size" attribute to our class after we've defined it?  No.
+
+But it turns out that there's a shortcut: Inside of a class definition, what looks like a variable definition isn't really a variable definition.  Inside of the "class" block, assigning to a variable actually creates... an attribute on the class.
+
+That's right: Nearly everywhere else in Python, assignment (a = 5) will create or update a variable definition.  But in a class definition, it creates or updates an attribute definition.  
+
+So I can actually write my class definition as:
+
+    class Neighborhood():
+        total_size = 0
+
+        def __init__(self):
+            self.houses = []
+
+        def add_houses(self, *args):
+            for one_house in args:
+                self.houses.append(one_house)
+                Neighborhood.total_size += one_house.size()
+
+        def size(self):
+            return sum(one_house.size()
+                       for one_house in self.houses)
+
+Consider this: Python modules are files containing code. Inside of the module file, you can define functions and variables, and they are all global variables. But when we import the module, those functions and variables are actually attributes on the module.
+
+So if you say "import abcd", and the "abcd" module defined the variable "x" and the function "hello", then you need to use them as "abcd.x" and "abcd.hello".  Global definitions inside of the module are actually attributes outside of the module.
+
+A class definition works the same way, but without an "import" and without an external file: Any definition in the "class" block looks like a variable, but is actually an attribute. So our assignment of "total_size = 0" is actually defining "Neighborhood.total_size".
+
+How about the invocations of "def"?  Doesn't "def" also define a variable?  And if so, doesn't this mean that we're defining our methods as attributes on our classes?
+
+Answer: Yes, absolutely 100% we are. Methods are attributes defined on our classes.  Which is why we can talk about "str.upper" as the generic string "upper" method. Or we can talk about "Neighborhood.add_houses" as our method to add new houses to the neighborhood.
+
+The fact that classes can contain attributes is at the heart of Python's object system, and makes it all work. We'll talk about this lots more -- both here, and in the forum. But once you see the consistency in Python, it's hard to un-see, and it makes the entire language easier to understand.
+
+Now, to answer my questions:
+
+(1) What's the difference between Neighborhood.total_size and Neighborhood.add_houses?  Are both attributes?  If so, then what's the difference between a data attribute and a method?  (Or is there any difference?)
+
+Both are attributes. The difference is that "Neighborhood.total_size" is an attribute containing an integer, where as "Neighborhood.add_houses" is an attribute containing a method object (basically a function).
+
+(2) What happens if you ask for n1.total_size or n2.total_size?  Does it work?
+
+Yes, this will work!  We'll talk about this lots more, but when you ask Python to retrieve an attribute, it first looks on the object you requested (n1 or n2), and asks if the object contains that attribute. If so, then great: The value is returned.  But if not, then Python doesn't give up. Rather, it turns to the class, and looks for it there.
+
+This is part of what I call the ICPO search patch for attributes: Instance, class, parents, and then (finally) the built-in "object" class.  Here's a blog post I wrote on the subject:
+
+    https://lerner.co.il/2019/09/10/legb-meet-icpo-pythons-search-strategy-for-attributes/
+
+But don't be fooled into think that "total_size" exists on n1, or that it's somehow shared across the instances and class. That would be analogous to a "static variable" in Java or C#, and Python doesn't have those -- although class attributes are similar in many ways.
+
+(3) Can you set n1.total_size?  Does it affect Neighborhood.total_size?
+
+The answer is: Yes, you can set it. But then you've set a new attribute on "n1", which has nothing whatsoever to do with "Neighborhood.total_size".  Asking for "n1.total_size" and "Neighborhood.total_size" will then give you completely different results.
+
+It took me years to understand how attributes work in Python, how they are different from other languages, and how they keep the language consistent. So I'm going to keep mentioning this topic, and I hope that it'll start to sink in.
+
+But starting tomorrow, it's time to play with inheritance.  I'll be back then with a new exercise!
+
+Reuven
+

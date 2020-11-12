@@ -1,0 +1,52 @@
+This week, we're going to take a short break from the world of pure object-oriented programming, and put it into the perspective of Python-specific programming.
+
+As you know, Python is a *dynamic* language. This means, in short, that variables don't have types, but that values do.  In other words, when I say:
+
+    x = 10
+
+The variable "x" is now referencing the integer 10. But that doesn't mean that "x" can only contain integers; if I want, I could even write code like this:
+
+    x = 10
+    x = 'abcde'
+    x = [10, 20, 30]
+
+As far as Python is concerned, this is totally fine. After all, in all three of these lines of code, we're assigning a Python object to a variable. What could be wrong with that?
+
+Well, as anyone who comes from a static language is concerned, a lot could go wrong. What if you pass the wrong type of argument to a method? More specifically, what happens if you try to add an instance of "Neighborhood" to an existing "Neighborhood"? As things are currently written, no one will complain... until it's too late.
+
+Over the years, people who come to Python from static languages have complained about such problems, and most people in the Python community pooh-poohed them, saying, "Oh, you just don't understand how flexible a dynamically typed language can be."  And that's true... but when you're working on a large project with many different people, it's not enough to document your modules, classes, methods, and functions: You also need some sort of checking system.
+
+"Mypy" is an external program in the Python world that makes it possible to have the best of both worlds. Python itself ignores type annotations completely, meaning that you can do the following:
+
+    x = 100
+    x = 'abcd'
+
+Python won't care in the slightest about the above code. But Mypy will catch it, saying that you probably don't to set a string value to a variable that was previously set to be an integer.
+
+You can add annotations to functions, as well; I'm not going to go into the details here, and instead suggest that you read up on them here:
+
+    https://realpython.com/python-type-checking/
+
+The above article also has a lot of great information about type checking in general, and some of the competitors (such as they are) to Mypy.  Another source of information is a series I wrote in the late, great Linux Journal:
+
+    https://www.linuxjournal.com/content/introducing-mypy-experimental-optional-static-type-checker-python
+    https://www.linuxjournal.com/content/pythons-mypy-advanced-usage
+
+Now, you'll need to install "Mypy" for this week's exercise.  As a general rule, it should be easy to do so with "pip":
+
+    pip install mypy
+
+If you encounter problems, please mention them in the forum, and I'll do what I can to help.
+
+Your task for this week is to take the code from last week and modify it such that it doesn't encounter any errors when you run it -- and that if you try to pass (as I mentioned above) a "Neighborhood" instance to "Neighborhood.add_houses", then "Mypy" will get upset.
+
+Note that I want you to fix the problems that result from calling
+
+    mypy --strict solution.py
+
+The "--strict" flag tells Mypy that it should not only complain when annotations mismatch, but also when you haven't put any annotations on function parameters and return values. In other words, "--strict" ensures that your entire file is covered by "Mypy", and doesn't let you say, "Oh, I'll just get to it later."
+
+I'll be back on Monday with my solutions and some additional examples. And then, we'll start to use our object hierarchy in some new ways.
+
+Reuven
+

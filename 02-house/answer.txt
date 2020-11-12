@@ -1,0 +1,62 @@
+This week, we took our original "Room" class, representing a single room in a house, and added a new "House" class, which we can think of as a collection of "Room" instances.
+
+Let's just stop for a moment and think about this: So often, programming requires that we see something large, and then break it down into its individual pieces. The ability to see something as the sum of parts, to identify the parts you'll need, and then model the larger entity based on smaller pieces, is a crucial part of the programming puzzle.
+
+For example: When we built bookshelves in our living room, the carpenter saw the space we wanted to fill, and figured out how many shelves (of what length and height) he could put in that space. You can imagine that he started with a "Space" object, and filled that area with multiple "Shelf" objects, each with different length and height attributes. The skill was not only knowing how to build such objects, but seeing how the parts fit together to form a solution.
+
+So in this particular case, we want to have a "House" object. That object will contain one or more "Room" objects. How many? We don't know in advance, but we do know that we'll be modifying the number of "Room" objects over time.
+
+As a result, we're going to want to store the "Room" objects in a list -- which is designed not only to be mutable, but also traditionally contains multiple objects of the same type.  We could, in theory, create our "House" object without any "rooms" attribute, adding it only if and when we need to do so. But it's generally considered a good idea to put all attributes, even those that don't yet have any values in them, in the "__init__" method.
+
+Moreover, we're not really going to have an empty value for "self.rooms" in "__init__".  Rather, we're going to assign it an empty list. That way, we can always iterate over that list, and get all of the rooms that we have added. If there are zero rooms on our list, then the "for" loop will just end that much faster!
+
+So far, then, our class looks like this:
+
+    class House():
+        def __init__(self):
+            self.rooms = []
+
+Next, we need to implement an "add_rooms" method. The tricky thing here was that the method can take any number of arguments, each of which is considered an instance of "Room". In some languages, we can write a function that takes one argument, another that takes two, and yet another that takes three. But in Python, we can only define a function once; if we define it a second time, that second definition has priority.
+
+As a result, we're going to need to use a special Python trick, the "*args" parameter. This parameter, which must come at the end of the parameter list (well, unless we use **kargs, but we'll ignore that for now), grabs all of the positional parameters that no other parameter grabbed.  This means that if we have "*args" at the end of our parameter list, then we can invoke the function with any number of arguments. The "args" parameter will then be a tuple, containing any number (zero or more) of "Room" objects.
+
+We can then iterate over that tuple, adding each of the "Rooms" to the "self.rooms" attribute. We can append each one: Note that we're not adding the name of the room, or the size of the room, but the actual "Room" object. That's fine, and doesn't consume any more memory than storing the integer or string would, because they're all just references to objects in Python's memory.
+
+Our method will thus look like:
+
+    def add_rooms(self, *args):
+        for one_item in args:
+            self.rooms.append(one_item)
+
+
+Next, we want to get the total size of the house, as the sum total of all the room. In order to do this, we'll need to iterate over the list ("self.rooms"), get the size of each one, and then add them together.  In theory, we could use a regular "for" loop for this. But think of it this way: The builtin "sum" method returns the sum of a list of numbers. If we can create a list of numbers from our list of rooms, then we'll be able to run "sum" on it.
+
+As always: If we have a sequence, and want to transform it into another sequence, we can and should use a list comprehension. We can thus say:
+
+    def size(self):
+        return sum([one_room.size
+                   for one_room in self.rooms])
+
+We iterate over "self.rooms", grabbing the "size" attribute from each room. We take the resulting list and pass it to "sum", which then returns the total size.
+
+But wait: Why create a list, when we can simply use a generator, i.e., an object that knows how to behave in a "for" loop? Here, we can remove the square brackets and create a generator comprehension, getting the same result but with less memory use:
+
+    def size(self):
+        return sum(one_room.size
+                   for one_room in self.rooms)
+
+Finally, I wanted you to implement a "__str__" method that would let us print the contents of the current house. For this, I once again turned to a list comprehension (or actually, a generator expression), allowing me to iterate over each element of "self.rooms", run "str" on each room, and get a string back.  This produced a list of strings, which I could join together with a newline character, "\n".  That gave me all I needed in order to get it to work:
+
+    def __str__(self):
+        output = 'House:\n'
+        output += '\n'.join(str(one_room)
+                            for one_room in self.rooms)
+        return output
+
+Remember that your "__str__" (and "__repr__") methods can do whatever they want, so long as they return strings. 
+
+And with that, we've created our "House" class!
+
+I'll be back tomorrow with a new exercise that builds (so to speak) on this one.
+
+Reuven

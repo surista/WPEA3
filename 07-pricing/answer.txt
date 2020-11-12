@@ -1,0 +1,48 @@
+This week, we looked into polymorphism a bit. That is, we saw how a number of classes can implement the same method.
+
+Which might lead you to the question: What's the big deal?
+
+First: In statically compiled languages, this is actually a big deal, because which objects are created, passed, and returned is much more carefully monitored. You can't just throw any object at any function and expect it to work. Defining the name, arguments, and return value for a method means not just establishing a convention. It means that the program can and will actually work.
+
+In Python, things are much looser -- although with Mypy, you can admittedly tighten things up a bit more. Polymorphism thus becomes a matter of defining an interface that multiple classes will implement, and then implementing it.
+
+Often, this sort of polymorphic interface means that you'll have a number of related classes, each implementing the same method name and call signature, but with different results. But you could argue that polymorphic interfaces don't have to exist among related classes.  Consider the fact that many objects in Python know how to work with [], square brackets. These objects aren't necessarily related to one another, but by implementing the same interface, they play well with other objects, and can be used in a variety of situations.
+
+In our exercise this week, I asked you to implement a "calculate_tax" method on our various types of homes. This is a simple, but not atypical, way to take advantage of polymorphism. Because each of the house objects implements the same method name, we can run the method on any house that might exist, regardless of what type of house it is.
+
+Moreover, each of the houses calculates tax in a slightly different way. That's totally OK; so long as the method returns a result that can be used by the caller, we're just fine.
+
+So in the case of "House", the calculation was pretty simple:
+
+    def calculate_tax(self) -> float:
+        return self.size() * 100
+
+But our "SingleFamilyHouse" had a much more complex calculation:
+
+    def calculate_tax(self) -> float:
+        s = self.size()
+        if s <= 150:
+            return s * 100 * 1.2
+        else:
+            return (150 * 100 * 1.2) + ((s - 150) * 100 * 1.5)
+
+In the case of an "Apartment", I said that the tax would be 75% of what the main "House" was set to be. We could have just calculated it by multiplying the size by 75, but I decided to take advantage of the existing calculation, and base our return value on it:
+
+    def calculate_tax(self) -> float:
+        return super().calculate_tax() * 0.75
+
+Notice that I've used the "super()" method here, which returns an object that knows how to traverse the object's MRO ("method resolution order") and find the first object on which "calculate_tax" can run. In this case, it'll be our parent, "House", but in a more complex hierarchy, it could be much farther away.
+
+Now that each of our house types can have its tax calculated, we want to calculate it for the entire neighborhood. Here, I basically want to go to each house (i.e., each object in "self.houses"), get its tax, and then add those numbers up together.  I could do this with a list comprehension:
+
+    def calculate_tax(self) -> float:
+        return sum([one_house.calculate_tax()
+                   for one_house in self.houses])
+
+But that'll mean returning a list -- and potentially a very long list -- of numbers to "sum".  I thus decided to use a generator expression, which by definition uses far less memory than the list, and which "sum" can still take as input.
+
+What do you think?
+
+I'll be back tomorrow with a new exercise, building (so to speak) on this even more.
+
+Reuven
