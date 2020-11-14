@@ -1,5 +1,5 @@
 import pytest
-from solution import Room, House, NotEnoughSpaceError, Neighborhood
+from week_4 import Room, House, NotEnoughSpaceError, Neighborhood
 
 
 def test_empty_house():
