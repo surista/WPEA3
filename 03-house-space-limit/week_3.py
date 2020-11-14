@@ -6,6 +6,9 @@ Oct 2020
 Week 3 of WPE A3
 """
 
+class NotEnoughSpaceError(Exception):
+    pass
+
 class Room:
     def __init__(self, name, size):
         self.name = name
@@ -16,12 +19,17 @@ class Room:
 
 
 class House:
-    def __init__(self, size):
+    def __init__(self, available_space = 100):
+        self.available_space = available_space
         self.rooms = []
 
     def add_rooms(self, *args):
         for item in args:
-            self.rooms.append(item)
+            if self.size() + item.size > self.available_space:
+                raise NotEnoughSpaceError
+            else:
+                self.rooms.append(item)
+
 
     def size(self):
         return sum(one_room.size for one_room in self.rooms)
@@ -36,7 +44,7 @@ class House:
                             for one_room in self.rooms)
         return output
 
-h = House()
+h = House(100)
 bedroom = Room('bedroom', 10)
 kitchen = Room('kitchen', 9)
 bathroom = Room('bathroom', 3)
