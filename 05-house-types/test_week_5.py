@@ -1,6 +1,5 @@
 import pytest
-
-from week_4 import Room, House, NotEnoughSpaceError, Neighborhood
+from week_5 import Room, House, NotEnoughSpaceError, Neighborhood, Apartment, TownHouse, SingleFamilyHouse
 
 
 def test_empty_house():
@@ -97,3 +96,51 @@ def test_two_neighborhoods():
     n2.add_houses(*houses)
 
     assert n1.size() + n2.size() == Neighborhood.total_size
+
+
+def test_default_apartment_house_sizes():
+    h = Apartment()
+    assert h.available_space == 80
+
+    h = Apartment(200)
+    assert h.available_space == 200
+
+
+def test_default_townhouse_house_sizes():
+    h = TownHouse()
+    assert h.available_space == 100
+
+    h = TownHouse(200)
+    assert h.available_space == 200
+
+
+def test_default_single_family_house_sizes():
+    h = SingleFamilyHouse()
+    assert h.available_space == 200
+
+    h = SingleFamilyHouse(400)
+    assert h.available_space == 400
+
+
+def test_mixed_neighborhood():
+    Neighborhood.total_size = 0
+    n = Neighborhood()
+
+    houses = []
+    for house_type in [Apartment, TownHouse, SingleFamilyHouse]:
+        h = house_type()
+        bedroom = Room('bedroom', 10)
+        kitchen = Room('kitchen', 9)
+        bathroom = Room('bathroom', 3)
+        h.add_rooms(bedroom, kitchen, bathroom)
+        houses.append(h)
+
+        assert str(h) == f'''{house_type.__name__}:
+bedroom, 10m
+kitchen, 9m
+bathroom, 3m'''
+
+    n.add_houses(*houses)
+    assert n.size() == Neighborhood.total_size
+    assert dict(**n.house_types()) == {'Apartment': 1,
+                                       'TownHouse': 1, 'SingleFamilyHouse': 1}

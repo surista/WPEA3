@@ -1,0 +1,129 @@
+
+This week, we're going to build on the "ConfigFile" class that we started on last week. That class was able to store and retrieve configuration files, and also allowed us to set and get name-value pairs in the file.
+
+This week, we're return to the idea of inheritance. As you'll recall, inheritance is all about taking a class that already exists, and creating a new class that is similar to it, but with different behavior.
+
+This week, we're going to create a "ConfigFileWithBackup" class. The name is admittedly a bit unwieldy, but I hope that the point is clear -- that this will give us a cheap way to keep earlier versions of our configuration files, and then to restore back from them.
+
+The idea is as follows: In the original version of "ConfigFile", every time you invoke "dump", the file is written to disk.  
+
+I want the "ConfigFileWithBackup" class to do the same thing. But I also want it to take the file, after it is saved, and copy it to a new filename, with the current timestamp prepended to it.
+
+That is, if the config file is saved in "config.txt", then invoking
+
+    c.dump()
+
+
+will not only update "config.txt", but will also copy that to "012345-config.txt". The "012345" will actually be the current Unix time, aka the number of seconds since January 1st 1970. You can get that value from "time.time()", and you can copy files with "shutil.copy". (That is: Use the "time" function in the "time" module, and the "copy" function in the "shutil" module.)
+
+Moreover: You should also implement a "restore" method, which will take a single argument, a timestamp. The "restore" method will then load the version of the configuration file with that timestamp. If no such file exists, then the method should raise a FileNotFoundError exception.
+
+And yes, I realize that this means we'll end up adding lots of files to the current directory -- but the alternative, namely managing a subdirectory and its contents, seemed like it would be a bit too complex.
+
+I'll be back on Monday with a solution.
+
+Until then,
+
+Reuven
+
+from solution import ConfigFile, ConfigFileWithBackups
+import os
+import re
+
+
+def test_set_get():
+    cf = ConfigFile('myconfig.txt')
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', 3)
+
+    assert cf.config == {'a': '1', 'b': '2', 'c': '3'}
+
+    assert cf.get('a') == '1'
+    assert cf.get('b') == '2'
+    assert cf.get('c') == '3'
+
+
+def test_store_retrieve1(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+
+    cf = ConfigFile(filename)
+    assert cf.sep == '='
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    config_lines = open(filename).readlines()
+    assert config_lines[0] == 'a=1\n'
+    assert config_lines[1] == 'b=2\n'
+    assert config_lines[2] == 'c=3\n'
+
+    new_cf = ConfigFile(filename)
+    new_cf.load()
+    assert cf.config == new_cf.config
+
+
+def test_store_retrieve2(tmp_path):
+    filename = tmp_path / 'myconfig2.txt'
+
+    cf = ConfigFile(filename, sep='::')
+    assert cf.sep == '::'
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    config_lines = open(filename).readlines()
+    assert config_lines[0] == 'a::1\n'
+    assert config_lines[1] == 'b::2\n'
+    assert config_lines[2] == 'c::3\n'
+
+    new_cf = ConfigFile(filename, sep='::')
+    new_cf.load()
+    assert cf.config == new_cf.config
+
+
+def test_store_with_backups(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+    assert len(list(tmp_path.iterdir())) == 0
+
+    cf = ConfigFileWithBackups(filename, sep='::')
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+    assert len(list(tmp_path.iterdir())) == 2
+
+
+def test_restore(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+    cf = ConfigFileWithBackups(filename, sep='::')
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    cf.set('a', '100')
+    cf.set('b', '200')
+    cf.set('c', '300')
+
+    restore_filename = [one_filename
+                        for one_filename in tmp_path.iterdir()
+                        if re.search('[0-9.]-', str(one_filename.name))][0]
+
+    t = restore_filename.name.split('-')[0]
+    cf.restore(t)
+
+    assert cf.get('a') == '1'
+    assert cf.get('b') == '2'
+    assert cf.get('c') == '3'
+

@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 S. Urista
-Oct 2020
-Week 1 of WPA #3
+Nov 2020
+Module documentation goes here
 """
 
 class Room:
@@ -11,8 +11,6 @@ class Room:
         self.name = name
         self.size = size
 
-    # def __str__(self):
-    #     return "{self.name}, {self.size}".format(self=self)
-
     def __str__(self):
         return f'{self.name}, {self.size}m'
+

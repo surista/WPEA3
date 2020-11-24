@@ -1,0 +1,56 @@
+
+This week, we'll start on a new object-oriented journey, with a class that represents configuration files.
+
+A configuration file typically contains name-value pairs, written as follows:
+
+    name = value
+
+
+When you create a new instance of ConfigFile, you'll need to pass it the filename with which it'll be associated (for writing and reading) and also a separator string ("sep").
+
+Then you are to write a "dump" method (which writes the information in memory to disk, overwriting any previously stored file) and a L"load" method (which reads the data from disk into the object, overwriting whatever was previously in memory).  As stated above, each key-value pair should be written on a separate line, with the "sep" attribute used to separate the names and values.  The values should be transformed into strings (if they aren't already), to avoid problems with typing.
+
+In addition, you are to write "set" and "get" methods, which will let someone set and retrieve individual name-value pairs. And yes, we could just use "self.config", but this gives something of an API to our object's name-value pairs.
+
+I'll be back on Monday with a solution.
+
+Reuven
+ 
+
+from solution import ConfigFile
+
+
+def test_set_get():
+    cf = ConfigFile('myconfig.txt')
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', 3)
+
+    assert cf.config == {'a': '1', 'b': '2', 'c': '3'}
+
+    assert cf.get('a') == '1'
+    assert cf.get('b') == '2'
+    assert cf.get('c') == '3'
+
+
+def test_store_retrieve(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+
+    cf = ConfigFile(filename)
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    config_lines = open(filename).readlines()
+    assert config_lines[0] == 'a=1\n'
+    assert config_lines[1] == 'b=2\n'
+    assert config_lines[2] == 'c=3\n'
+
+    new_cf = ConfigFile(filename)
+    new_cf.load()
+    assert cf.config == new_cf.config
+
+

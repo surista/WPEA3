@@ -1,0 +1,198 @@
+
+In the last two weeks, we've created two new classes, each of which represents a configuration file. The two are basically interchangeable, except for the fact that one (the subclass, "ConfigFileWithBackups") adds functionality to its parent that has to do with backup versions.
+
+This week, we're going to add some functionality to the parent class. In particular, we're going to make it possible to compare two configuration files, in order to find out if they are equal or if one is a subset of the other.
+
+We can typically check equality with the == operator in Python:
+
+    x = 10
+    y = 10
+
+    print(x == y)
+
+
+The == operator returns either True or False.  But how does it know?  It invokes the "__eq__" method on the left-hand argument.
+
+We can similarly invoke "<", "<=", ">", and ">=" -- and these invoke the "__lt__", "__le__", "__gt__", and "__ge__" method, respectively.
+
+So, here's what I want you to do:
+
+(1) The == comparison should work between two instances of ConfigFile (or it subclasses).  It'll indicate whether the key-value pairs that we have are identical. That is: Are the configurations the same?
+
+(2) The < and > comparisons, by contrast, should work like those operators on the "set" class, indicating whether one configuration is a subset of the other.  In other words:
+
+    cf1 = ConfigFile('cf1.txt')
+    cf1.set('a', 1)
+    cf1.set('b', 1)
+
+    cf2 = ConfigFile('cf2.txt')
+    cf2.set('a', 1)
+
+    print(cf1 > cf2)   # True
+    print(cf2 > cf1)   # True
+
+    print(cf1 < cf2)   # False
+
+
+Note that when it comes to the < and > comparisons, we're just comparing keys, not values.  This is admittedly a bit weird, but I think that it'll make the implementation easier.
+
+Here's a tutorial on implementing the "<" and ">" operators:
+
+    https://www.tutorialspoint.com/How-to-implement-Python-lt-gt-custom-overloaded-operators
+
+I'll be back on Monday with a solution.
+
+Reuven
+
+from solution import ConfigFile, ConfigFileWithBackups
+import os
+import re
+
+
+def test_set_get():
+    cf = ConfigFile('myconfig.txt')
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', 3)
+
+    assert cf.config == {'a': '1', 'b': '2', 'c': '3'}
+
+    assert cf.get('a') == '1'
+    assert cf.get('b') == '2'
+    assert cf.get('c') == '3'
+
+
+def test_store_retrieve1(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+
+    cf = ConfigFile(filename)
+    assert cf.sep == '='
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    config_lines = open(filename).readlines()
+    assert config_lines[0] == 'a=1\n'
+    assert config_lines[1] == 'b=2\n'
+    assert config_lines[2] == 'c=3\n'
+
+    new_cf = ConfigFile(filename)
+    new_cf.load()
+    assert cf.config == new_cf.config
+
+
+def test_store_retrieve2(tmp_path):
+    filename = tmp_path / 'myconfig2.txt'
+
+    cf = ConfigFile(filename, sep='::')
+    assert cf.sep == '::'
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    config_lines = open(filename).readlines()
+    assert config_lines[0] == 'a::1\n'
+    assert config_lines[1] == 'b::2\n'
+    assert config_lines[2] == 'c::3\n'
+
+    new_cf = ConfigFile(filename, sep='::')
+    new_cf.load()
+    assert cf.config == new_cf.config
+
+
+def test_store_with_backups(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+    assert len(list(tmp_path.iterdir())) == 0
+
+    cf = ConfigFileWithBackups(filename, sep='::')
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+    assert len(list(tmp_path.iterdir())) == 2
+
+
+def test_restore(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+    cf = ConfigFileWithBackups(filename, sep='::')
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    cf.set('a', '100')
+    cf.set('b', '200')
+    cf.set('c', '300')
+
+    restore_filename = [one_filename
+                        for one_filename in tmp_path.iterdir()
+                        if re.search('[0-9.]-', str(one_filename.name))][0]
+
+    t = restore_filename.name.split('-')[0]
+    cf.restore(t)
+
+    assert cf.get('a') == '1'
+    assert cf.get('b') == '2'
+    assert cf.get('c') == '3'
+
+
+def test_equality():
+    cf1 = ConfigFile('cf1.txt')
+    cf1.set('a', 1)
+    cf1.set('b', 2)
+
+    cf2 = ConfigFile('cf2.txt')
+    cf2.set('a', 1)
+
+    assert cf1 == cf1
+    assert cf2 == cf2
+    assert cf1 != cf2
+
+    cf2.set('b', 2)
+    assert cf1 == cf2
+
+    cf2.set('b', 234)
+    assert cf1 != cf2
+
+
+def test_lt_gt():
+    cf1 = ConfigFile('cf1.txt')
+    cf1.set('a', 1)
+    cf1.set('b', 2)
+
+    cf2 = ConfigFile('cf2.txt')
+    cf2.set('a', 1)
+
+    assert cf1 > cf2
+    assert cf2 < cf1
+
+    assert not (cf1 < cf2)
+    assert not (cf2 > cf1)
+
+    cf2.set('b', 2)
+    cf2.set('c', 3)
+
+    assert cf1 < cf2
+    assert cf2 > cf1
+
+    cf1.set('a', 100)
+    cf2.set('a', 234)
+
+    assert cf1 < cf2
+    assert cf2 > cf1
+
+Questions? Comments? Problems? The Weekly Python Exercise forum is at http://forum.lerner.co.il/. To get Reuven's attention, be sure to tag your message with @reuven.
+To make sure you keep getting these emails, please add reuven@lerner.co.il to your address book or whitelist us. Want out of the loop? Unsubscribe.
+
+Our postal address: 14 Migdal Oz Street, Apt. #1, Modi'in 71703 Israel
+

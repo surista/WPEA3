@@ -1,0 +1,89 @@
+
+People often think of classes as giving us more concrete versions of abstract ideas. But often, classes allow us to wrap concrete functionality into convenient packages, and even to raise the abstraction layer a bit. That's what we started to work on this week, taking the idea of a configuration file -- which we could easily read from and write to on our own -- and giving it an object-oriented API.
+
+Why would we do such a thing? First of all, to separate the interface from the implementation. In other words, we might want to change the way in which our class represents our configuration file, or the way in which it opens it.  We might want to represent it differently in memory.  We might even want to back up old versions of the configuration file, or keep them around.  Perhaps we want to store them in a database, or on Amazon S3.
+
+Another reason to do so is just for the semantic power inherent in object-oriented programming. Once we have our "ConfigFile" class working, we're no longer thinking in terms of files and separators.  Rather, we're thinking in terms of the data we want to work with, and the inputs and outputs.
+
+For this week's exercise, I wanted you to create a class that would take a mandatory filename, and an optional separator between the names and values. The idea was that this class ("ConfigFile") would allow you to create and manage configurations using a simple API -- one that works somewhat like a dictionary, with 'set' and 'get' methods, and somewhat like Python's "pickle" module, which offers "load" and "dump" methods for reading from disk and storing to disk.
+
+The first thing to consider was the "__init__" method, which takes a new object and adds attributes to it. In our case, there were two attributes that we knew would need -- "filename" and "sep" -- that would be populated by the user creating the "ConfigFile" object. But we also needed to store our configuration somewhere, with name-value pairs.  I chose to use a dictionary as an instance attribute, not an unusual choice in Python code.  Thus, my "__init__" looked like this:
+
+    def __init__(self, filename, sep='='):
+        self.filename = filename
+        self.sep = sep
+        self.config = {}
+
+
+Next, I needed a way to set and retrieve the values. You could argue that I should have asked you to implement the "__getitem__" and "__setitem__" methods, thus allowing us to use square brackets, rather than using such methods.  Regardless, Here's how I implemented things:
+
+    def set(self, name, value):
+        self.config[name] = str(value)
+
+    def get(self, name):
+        return self.config[name]
+
+
+The only potential surprise here is that I turned all of the values into strings. That's because there's no good or easy way to retrieve data from disk as anything other than a string, so I decided that all values would be treated as strings, even if they could potentially be something else.
+
+Next, I needed to store and retrieve the data.  Storing, in the "dump" method, looked like this:
+
+    def dump(self):
+        with open(self.filename, 'w') as outfile:
+            for key, value in self.config.items():
+                outfile.write(f'{key}{self.sep}{value}\n')
+
+
+Notice that we have stored the filename as "self.filename", and not the file object that would be created. I decided that it would be better to open and close the file as necessary, rather than worry about reading vs. writing and the other chores that come with keeping a file handle open for a long time.
+
+Also note that when you write to a file, you need to explicitly indicate where the newlines should go. The "print" function always adds a newline by default, so I find that people often forget it.
+
+Finally, we want to read our data back. Given the simple structure of our data, it can look like this:
+
+    def load(self):
+        self.config = {}
+        for one_line in open(self.filename):
+            key, value = one_line.strip().split(self.sep, 1)
+            self.config[key] = value
+
+
+The only tricky thing here was my use of "str.split", passing it a second argument (1), indicating how many times it should split. That is, even if the "sep" string appears in the value, we won't split again; that character will be part of the value we read.
+
+Also notice that we reset "self.config" at the start of the method, to avoid merging old data with new data.
+
+And that's it!
+
+I'll be back tomorrow with an exercise that builds on this one.
+
+Until then,
+
+Reuven
+
+ 
+
+#!/usr/bin/env python3
+
+
+class ConfigFile():
+    def __init__(self, filename, sep='='):
+        self.filename = filename
+        self.sep = sep
+        self.config = {}
+
+    def set(self, name, value):
+        self.config[name] = str(value)
+
+    def get(self, name):
+        return self.config[name]
+
+    def dump(self):
+        with open(self.filename, 'w') as outfile:
+            for key, value in self.config.items():
+                outfile.write(f'{key}{self.sep}{value}\n')
+
+    def load(self):
+        self.config = {}
+        for one_line in open(self.filename):
+            key, value = one_line.strip().split(self.sep, 1)
+            self.config[key] = value
+

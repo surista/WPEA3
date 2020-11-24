@@ -19,13 +19,11 @@ class House():
             self.rooms.append(one_item)
 
     def size(self):
-        return sum(one_room.size
-                   for one_room in self.rooms)
+        return sum(one_room.size for one_room in self.rooms)
 
     def __str__(self):
         output = 'House:\n'
-        output += '\n'.join(str(one_room)
-                            for one_room in self.rooms)
+        output += '\n'.join(str(one_room) for one_room in self.rooms)
         return output
 
 

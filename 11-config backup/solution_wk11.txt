@@ -1,0 +1,98 @@
+
+Last week, we created our "ConfigFile" class. That class provided us with an API to configuration files, such that we could load them from disk into memory, read from and write to them, and then write them back to disk.  This is a common way to work with file formats; the API can be as simple or complex as you like.
+
+This week, we subclassed "ConfigFile" to provide us with some more functionality. This is a common way to work with objects, particularly when you cannot (or don't want to) modify an existing class. Subclassing makes it possible to take advantage of existing functionality, partially modifying it.  Adding the sort of behavior that we did this week is one example of when and how to make such extensions.
+
+The idea was that this week's class, "ConfigFileWithBackups", would work just like the original "ConfigFile" class, but with three differences:
+
+    The "dump" method would no longer just store the file. Rather, it would also join the current timestamp to the original filename.  Thus, you would not end up with "config.txt", but rather "1-config.txt" and "123-config.txt", with the numbers representing the Unix timestamp.
+    The "restore" method would then make it possible to retrieve any previous version of the configuration file that had been written to disk. The "restore" method would take a "timestamp" argument, which indicates which previous version should be restored.
+
+
+So, how do we do this?  First, we'll need a standardized way to create a timestamp-based filename.  I toyed with the idea of doing so in each separate method, but quickly realized that this would be a major violation of DRY -- don't repeat yourself. So I created a method that would do this for me, which I called "timestamp_filename":
+
+    def timestamp_filename(self, timestamp):
+        dirname, filename = os.path.split(self.filename)
+        new_filename = f'{timestamp}-{filename}'
+        return os.path.join(dirname, new_filename)
+
+
+The basic idea here is quite simple; I use "os.path.split" to break the filename apart from its path. Then I add the timestamp onto the filename, and then use "os.path.join" to re-assemble them.  If you ever need to do work with paths, then "os.path.split" and "os.path.join" and fantastic; they are cross-platform, and thus handle the whole "/" vs. "\" issue nicely.
+
+Now that we can create filenames, what do we do?  Well, we want to keep the interface the same as before -- that is, we want people to be able to invoke "dump" on their object and have it saved. But we want to have the parent class's behavior (i.e., ConfigFile.dump), and *then* also copy the file to our timestamp-based file.
+
+How can we do this?  Well, we could always duplicate the functionality. But that's not a good idea; the whole point of inheritance is to use the code that was already written (and tested) in the parent class. So we'll instead call the parent version of "dump", and then -- after we know that the file has been stored -- we'll copy it to a new filename.  Here's how we can do that:
+
+    def dump(self):
+        super().dump()
+        copy(self.filename,
+             self.timestamp_filename(time.time()))
+
+
+Notice how I've defined "dump": First, I call "super().dump()".  "super()" returns an object that allows us to invoke the "dump" method on the parent. That is, this ensures that the parent's version of "dump" will be called. We could equivalently have invoked "ConfigFile.dump(self)", but this is definitely the preferred, cleaner version.  It also means that if we move our class hierarchy around, it'll still invoke the same method -- although to be honest, I've never really liked that reasoning, if only because it's pretty rare to move classes around in a hierarchy.
+
+Also notice that we're copying the file using "shutil.copy", a great method in the Python standard library that's able to copy files around. This way, we don't need to bother ourselves with reading or writing the file; we just let someone else take care of it.
+
+And that's all we need to deal with here!  The rest of the implementation, because it isn't overriding our parent "ConfigFile" class, just inherits from the parent and continues to work as per usual.
+
+Tomorrow, we'll explore magic methods a bit more with our configuration class.
+
+Until then,
+
+Reuven
+ 
+
+#!/usr/bin/env python3
+
+from shutil import copy
+import time
+import os
+
+
+class ConfigFile():
+    def __init__(self, filename, sep='='):
+
+        self.filename = filename
+        self.sep = sep
+        self.config = {}
+
+    def set(self, name, value):
+        self.config[name] = str(value)
+
+    def get(self, name):
+        return self.config[name]
+
+    def dump(self):
+        with open(self.filename, 'w') as outfile:
+            for key, value in self.config.items():
+                outfile.write(f'{key}{self.sep}{value}\n')
+
+    def load(self):
+        self.config = {}
+        for one_line in open(self.filename):
+            key, value = one_line.strip().split(self.sep, 1)
+            self.config[key] = value
+
+
+class ConfigFileWithBackups(ConfigFile):
+    def timestamp_filename(self, timestamp):
+        dirname, filename = os.path.split(self.filename)
+        new_filename = f'{timestamp}-{filename}'
+        return os.path.join(dirname, new_filename)
+
+    def dump(self):
+        super().dump()
+        copy(self.filename,
+             self.timestamp_filename(time.time()))
+
+    def restore(self, timestamp):
+        old_filename = self.filename
+        self.filename = self.timestamp_filename(timestamp)
+        super().load()
+        self.filename = old_filename
+
+Questions? Comments? Problems? The Weekly Python Exercise forum is at http://forum.lerner.co.il/. To get Reuven's attention, be sure to tag your message with @reuven.
+To make sure you keep getting these emails, please add reuven@lerner.co.il to your address book or whitelist us. Want out of the loop? Unsubscribe.
+
+Our postal address: 14 Migdal Oz Street, Apt. #1, Modi'in 71703 Israel
+
