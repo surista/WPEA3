@@ -1,0 +1,232 @@
+﻿
+Let's say we want to print a string. We can do that by calling the "print" function:
+
+    s = 'abcd'
+    print(s)
+
+
+What if we want to put "s" inside of an f-string? That's easy enough:
+
+    print(f's is {s}')
+
+
+You might not be surprised by this. You might also not be surprised that every object in Python knows how to turn itself into a string, and thus present itself inside of an f-string.  When put inside of an f-string, each object calls its "__repr__" or "__str__" method.  The resulting string is passed to the f-string engine, which then returns a string.
+
+Except it isn't quite as simple as that: It turns out that if a "__format__" method is defined on an object, then that method will be invoked instead of "__repr__". This gives the object a chance to do something unusual when it is placed inside of a format string.
+
+But it gets even more interesting than that: As you might know, inside of an f-string's curly braces, you can have the data, plus an optional colon and "format code." How does each type of object have its own set of format codes? By interpreting the code, passed as a second argument to "__format__", and then doing whatever it feels is appropriate.
+
+This week, I want you to implement "__format__" for our ConfigFile object, so that we can put config files inside of format strings.  The format codes will be:
+
+    stats: Returns a string containing the filename and number of key-value pairs
+    short: Returns a string showing the configuration's name-value pairs as a dictionary
+    long: Returns a string containing the filename, and the config file, with each name-value pair on a line by itself
+
+
+If no format code is passed, then default to "short".
+
+In other words, if I say:
+
+    print(f'My config stats are: {cf:stats}')
+
+
+Then I'll get something like:
+
+    My config stats are: filename = 'myconfig.txt', with 20 key-value pairs
+
+
+But if I say:
+
+    print(f'My config is: {cf:long})
+
+
+then we should get a long printout.
+
+If another format code is sent, then raise a TypeError exception.
+
+For some information about __format__, take a look at:
+
+    https://pyformat.info/
+
+I'll be back on Monday with a solution.
+
+Reuven
+
+from solution import ConfigFile, ConfigFileWithBackups
+import pytest
+import os
+import re
+
+
+def test_set_get():
+    cf = ConfigFile('myconfig.txt')
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', 3)
+
+    assert cf.config == {'a': '1', 'b': '2', 'c': '3'}
+
+    assert cf.get('a') == '1'
+    assert cf.get('b') == '2'
+    assert cf.get('c') == '3'
+
+
+def test_store_retrieve1(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+
+    cf = ConfigFile(filename)
+    assert cf.sep == '='
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    config_lines = open(filename).readlines()
+    assert config_lines[0] == 'a=1\n'
+    assert config_lines[1] == 'b=2\n'
+    assert config_lines[2] == 'c=3\n'
+
+    new_cf = ConfigFile(filename)
+    new_cf.load()
+    assert cf.config == new_cf.config
+
+
+def test_store_retrieve2(tmp_path):
+    filename = tmp_path / 'myconfig2.txt'
+
+    cf = ConfigFile(filename, sep='::')
+    assert cf.sep == '::'
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    config_lines = open(filename).readlines()
+    assert config_lines[0] == 'a::1\n'
+    assert config_lines[1] == 'b::2\n'
+    assert config_lines[2] == 'c::3\n'
+
+    new_cf = ConfigFile(filename, sep='::')
+    new_cf.load()
+    assert cf.config == new_cf.config
+
+
+def test_store_with_backups(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+    assert len(list(tmp_path.iterdir())) == 0
+
+    cf = ConfigFileWithBackups(filename, sep='::')
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+    assert len(list(tmp_path.iterdir())) == 2
+
+
+def test_restore(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+    cf = ConfigFileWithBackups(filename, sep='::')
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    cf.set('a', '100')
+    cf.set('b', '200')
+    cf.set('c', '300')
+
+    restore_filename = [one_filename
+                        for one_filename in tmp_path.iterdir()
+                        if re.search('[0-9.]-', str(one_filename.name))][0]
+
+    t = restore_filename.name.split('-')[0]
+    cf.restore(t)
+
+    assert cf.get('a') == '1'
+    assert cf.get('b') == '2'
+    assert cf.get('c') == '3'
+
+
+def test_equality():
+    cf1 = ConfigFile('cf1.txt')
+    cf1.set('a', 1)
+    cf1.set('b', 2)
+
+    cf2 = ConfigFile('cf2.txt')
+    cf2.set('a', 1)
+
+    assert cf1 == cf1
+    assert cf2 == cf2
+    assert cf1 != cf2
+
+    cf2.set('b', 2)
+    assert cf1 == cf2
+
+    cf2.set('b', 234)
+    assert cf1 != cf2
+
+
+def test_lt_gt():
+    cf1 = ConfigFile('cf1.txt')
+    cf1.set('a', 1)
+    cf1.set('b', 2)
+
+    cf2 = ConfigFile('cf2.txt')
+    cf2.set('a', 1)
+
+    assert cf1 > cf2
+    assert cf2 < cf1
+
+    assert not (cf1 < cf2)
+    assert not (cf2 > cf1)
+
+    cf2.set('b', 2)
+    cf2.set('c', 3)
+
+    assert cf1 < cf2
+    assert cf2 > cf1
+
+    cf1.set('a', 100)
+    cf2.set('a', 234)
+
+    assert cf1 < cf2
+    assert cf2 > cf1
+
+
+def test_format():
+    cf = ConfigFile('cf1.txt')
+    cf.set('a', 1)
+    cf.set('b', 2)
+
+    with pytest.raises(TypeError):
+        print(f'{cf:stuff}')
+
+    format_output = f'{cf:stats}'
+    assert format_output == 'ConfigFile cf1.txt, with 2 key-value pairs'
+
+    cf.set('c', 3)
+    format_output = f'{cf:stats}'
+    assert format_output == 'ConfigFile cf1.txt, with 3 key-value pairs'
+
+    format_output = f'{cf:short}'
+    assert format_output == "Filename cf1.txt: {'a': '1', 'b': '2', 'c': '3'}"
+
+    format_output = f'{cf:long}'
+    assert format_output == """cf1.txt
+a=1
+b=2
+c=3
+"""
+
+Questions? Comments? Problems? The Weekly Python Exercise forum is at http://forum.lerner.co.il/. To get Reuven's attention, be sure to tag your message with @reuven.
+To make sure you keep getting these emails, please add reuven@lerner.co.il to your address book or whitelist us. Want out of the loop? Unsubscribe.
+
+Our postal address: 14 Migdal Oz Street, Apt. #1, Modi'in 71703 Israel

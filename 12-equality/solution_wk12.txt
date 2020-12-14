@@ -1,0 +1,152 @@
+﻿
+This week, we explored the idea of what "equality" can really mean in Python.  We're so used to using the "==" operator to compare things that we often forget that it, like other operators, can be overloaded.
+
+That is: We can define a method on our class, such that when we ask if "x == y", the method will be invoked.
+
+But first, let's consider the general case of magic methods for operator overloading: In general, whenever you say
+
+    a + b
+
+
+in Python, the operator is turned into a method call. In the case of "+", the "__add__" method is called on the left-hand object. So "a+b" is turned into:
+
+    a.__add__(b)
+
+
+This is true for all binary operators, including -, **, +=, and even ==.  In each case, Python checks to see if the appropriate method has been defined. If so, then it is invoked.  What each method does is up to you.
+
+For this week's exercise, we wanted to write methods for "==", as well as "<" and ">".  We said that two ConfigFile objects would be considered equal if their name-value pairs were precisely the same.
+
+Now, you could have written a for loop to go through each of the key-value pairs and compare them. But remember that each instance of ConfigFile contains a dictionary (self.config) with all of the name value pairs. A simple solution to this would be:
+
+    def __eq__(self, other):
+        return self.config == other.config
+
+
+Now, you might be saying that this is far too simple-minded: After all, what if someone tries to check equality with something else? For example, what if we try to compare a ConfigFile named "cf" with the number 5?  The comparison will fail because 5 lacks the attribute "config".
+
+You could argue that it's OK for us to get an error here, just as it's an error for "len" to raise an exception when someone tries to calculate the length of a non-iterable. And so I'm going to keep this as the "official" version of the method.
+
+But there are a few other options:
+
+One is to trap the AttributeError exception that might be raised, and return False if it is:
+
+    def __eq__(self, other):
+        try:
+            return self.config == other.config
+        except AttributeError:
+            return False
+
+
+This strikes me as a particularly Pythonic solution: Short and elegant, while still supporting "duck typing" -- the notion that we don't care what type of data is passed to us, so long as it adheres to the API. In other words, we don't care if "other" is a ConfigFile object; so long as it acts like a ConfigFile object.
+
+What if we want to tighten things up some more, and ensure that we only have an instance of ConfigFile?  We could do that, as follows:
+
+    def __eq__(self, other):
+        if type(other) == ConfigFile:
+            return self.config == other.config
+        else:
+            return False
+
+
+This is probably tempting for people who grew up in the world of Java or C#. After all, we don't want to let people pass the wrong type of data to our method, do we?  And it will work... except that it won't actually work if we have an instance of ConfigFileWithBackups -- because type() will return the wrong type.
+
+I'm generally against this sort of type checking, both on semantic/theoretical grounds and because I think that it restricts our code's flexibility. But let's face it: There are times when you need to check the type, and when MyPy isn't quite enough.
+
+Even then, the code that I wrote above is a *bad* idea, because (at the very least) it doesn't handle subclasses.  In such a case, it's a good idea to use the "isinstance" builtin function, which handles subclasses:
+
+    def __eq__(self, other):
+        if isinstance(other, ConfigFile):
+            return self.config == other.config
+        else:
+            return False
+
+
+I still think that the version which traps exceptions is the best way to go, but I can't argue with the fact that sometimes you need to check the class.
+
+What about our "<" and ">" methods? I asked that you define those such that they'll check if the "smaller" object's configuration is a subset of the "larger" object's configuration. I also said that it's OK to ignore the values.
+
+That last part was the key to my solution, at least: I decided that we could use the "<" and ">" operators as defined on Python's sets, where they also represent subsets. The question was how we could turn the configuration dictionary into a set, and thus compare the dicts in each of the two instances of "ConfigFile" with one another.
+
+Truth be told, this turned out to be quite simple: If you invoke the "set" class on an iterable, it creates a new set based on that iterable. Dictionaries are iterable, returning their keys. So if you invoke "set" on a dictionary, you get a set of keys. Meaning that we can then compare the two sets, and determine if one is a subset of the other:
+
+    def __lt__(self, other):
+        return set(self.config) < set(other.config)
+
+    def __gt__(self, other):
+        return set(self.config) > set(other.config)
+
+
+Again, these are fairly simple versions of such methods; they don't check the types, and assume that there is a "config" attribute. I'll apply the above discussion of "==" to these methods, as well.
+
+And there we have it! We've now implemented some of the comparison methods we might well want or need in Python objects.
+
+Tomorrow, I'll be back with another task for our config file.
+
+Until then,
+
+Reuven
+ 
+
+#!/usr/bin/env python3
+
+from shutil import copy
+import time
+import os
+
+
+class ConfigFile():
+    def __init__(self, filename, sep='='):
+
+        self.filename = filename
+        self.sep = sep
+        self.config = {}
+
+    def set(self, name, value):
+        self.config[name] = str(value)
+
+    def get(self, name):
+        return self.config[name]
+
+    def dump(self):
+        with open(self.filename, 'w') as outfile:
+            for key, value in self.config.items():
+                outfile.write(f'{key}{self.sep}{value}\n')
+
+    def load(self):
+        self.config = {}
+        for one_line in open(self.filename):
+            key, value = one_line.strip().split(self.sep, 1)
+            self.config[key] = value
+
+    def __eq__(self, other):
+        return self.config == other.config
+
+    def __lt__(self, other):
+        return set(self.config) < set(other.config)
+
+    def __gt__(self, other):
+        return set(self.config) > set(other.config)
+
+
+class ConfigFileWithBackups(ConfigFile):
+    def timestamp_filename(self, timestamp):
+        dirname, filename = os.path.split(self.filename)
+        new_filename = f'{timestamp}-{filename}'
+        return os.path.join(dirname, new_filename)
+
+    def dump(self):
+        super().dump()
+        copy(self.filename,
+             self.timestamp_filename(time.time()))
+
+    def restore(self, timestamp):
+        old_filename = self.filename
+        self.filename = self.timestamp_filename(timestamp)
+        super().load()
+        self.filename = old_filename
+
+Questions? Comments? Problems? The Weekly Python Exercise forum is at http://forum.lerner.co.il/. To get Reuven's attention, be sure to tag your message with @reuven.
+To make sure you keep getting these emails, please add reuven@lerner.co.il to your address book or whitelist us. Want out of the loop? Unsubscribe.
+
+Our postal address: 14 Migdal Oz Street, Apt. #1, Modi'in 71703 Israel

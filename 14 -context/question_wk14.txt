@@ -1,0 +1,232 @@
+
+This week, we're going to explore the idea of "context managers." That's a fancy term for something that you have undoubtedly used in Python for a while, but never thought about: The "with" keyword.
+
+When you open a file for writing, you probably do something like this:
+
+    with open('myfile.txt', 'w') as f:
+        f.write('abc\n')
+        f.write('def\n')
+
+    
+You probably know that the "with" and block means that the file is guaranteed to be flushed and closed by the time the block ends. But you might not know that this magic happens because the "with" keyword basically sticks two extra lines into the code:
+
+    with open('myfile.txt', 'w') as f:
+        # "with" adds f.__enter__() here
+        f.write('abc\n')
+        f.write('def\n')
+        # "with" adds f.__exit__() here
+
+
+In other words: Any object that implements the "__enter__" and "__exit__" methods can use "with". Any object that uses these methods is known as a "context manager".  In the case of file objects, they have the "__exit__" method defined, such that it flushes and closes the opened file.
+
+This week, I want you to add these methods to our ConfigFile class, such that using an instance of ConfigFile in a context manager will (a) load the data from disk when we enter the "with" block, and (b) write the data back to disk when we're done.  This will allow us to work with the ConfigFile object from within the "with" block without any explicit calls to "load" and "dump".
+
+If you need (or want) to read up a bit on context managers, here's some, um, context:
+
+    https://jeffknupp.com/blog/2016/03/07/python-with-context-managers/
+    https://www.geeksforgeeks.org/context-manager-in-python/
+
+Note that while you can implement context managers via a combination of decorator and generator, I'm just looking for a simple solution here.  Moreover, while the "__exit__" method can handle all sorts of exceptions and problems, you can ignore those, as well.
+
+I'll be back on Monday with my solution.
+
+Reuven
+    
+
+from solution import ConfigFile, ConfigFileWithBackups
+import pytest
+import os
+import re
+
+
+def test_set_get():
+    cf = ConfigFile('myconfig.txt')
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', 3)
+
+    assert cf.config == {'a': '1', 'b': '2', 'c': '3'}
+
+    assert cf.get('a') == '1'
+    assert cf.get('b') == '2'
+    assert cf.get('c') == '3'
+
+
+def test_store_retrieve1(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+
+    cf = ConfigFile(filename)
+    assert cf.sep == '='
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    config_lines = open(filename).readlines()
+    assert config_lines[0] == 'a=1\n'
+    assert config_lines[1] == 'b=2\n'
+    assert config_lines[2] == 'c=3\n'
+
+    new_cf = ConfigFile(filename)
+    new_cf.load()
+    assert cf.config == new_cf.config
+
+
+def test_store_retrieve2(tmp_path):
+    filename = tmp_path / 'myconfig2.txt'
+
+    cf = ConfigFile(filename, sep='::')
+    assert cf.sep == '::'
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    config_lines = open(filename).readlines()
+    assert config_lines[0] == 'a::1\n'
+    assert config_lines[1] == 'b::2\n'
+    assert config_lines[2] == 'c::3\n'
+
+    new_cf = ConfigFile(filename, sep='::')
+    new_cf.load()
+    assert cf.config == new_cf.config
+
+
+def test_store_with_backups(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+    assert len(list(tmp_path.iterdir())) == 0
+
+    cf = ConfigFileWithBackups(filename, sep='::')
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+    assert len(list(tmp_path.iterdir())) == 2
+
+
+def test_restore(tmp_path):
+    filename = tmp_path / 'myconfig.txt'
+    cf = ConfigFileWithBackups(filename, sep='::')
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+
+    cf.set('a', '100')
+    cf.set('b', '200')
+    cf.set('c', '300')
+
+    restore_filename = [one_filename
+                        for one_filename in tmp_path.iterdir()
+                        if re.search('[0-9.]-', str(one_filename.name))][0]
+
+    t = restore_filename.name.split('-')[0]
+    cf.restore(t)
+
+    assert cf.get('a') == '1'
+    assert cf.get('b') == '2'
+    assert cf.get('c') == '3'
+
+
+def test_equality():
+    cf1 = ConfigFile('cf1.txt')
+    cf1.set('a', 1)
+    cf1.set('b', 2)
+
+    cf2 = ConfigFile('cf2.txt')
+    cf2.set('a', 1)
+
+    assert cf1 == cf1
+    assert cf2 == cf2
+    assert cf1 != cf2
+
+    cf2.set('b', 2)
+    assert cf1 == cf2
+
+    cf2.set('b', 234)
+    assert cf1 != cf2
+
+
+def test_lt_gt():
+    cf1 = ConfigFile('cf1.txt')
+    cf1.set('a', 1)
+    cf1.set('b', 2)
+
+    cf2 = ConfigFile('cf2.txt')
+    cf2.set('a', 1)
+
+    assert cf1 > cf2
+    assert cf2 < cf1
+
+    assert not (cf1 < cf2)
+    assert not (cf2 > cf1)
+
+    cf2.set('b', 2)
+    cf2.set('c', 3)
+
+    assert cf1 < cf2
+    assert cf2 > cf1
+
+    cf1.set('a', 100)
+    cf2.set('a', 234)
+
+    assert cf1 < cf2
+    assert cf2 > cf1
+
+
+def test_format():
+    cf = ConfigFile('cf1.txt')
+    cf.set('a', 1)
+    cf.set('b', 2)
+
+    with pytest.raises(TypeError):
+        print(f'{cf:stuff}')
+
+    format_output = f'{cf:stats}'
+    assert format_output == 'ConfigFile cf1.txt, with 2 key-value pairs'
+
+    cf.set('c', 3)
+    format_output = f'{cf:stats}'
+    assert format_output == 'ConfigFile cf1.txt, with 3 key-value pairs'
+
+    format_output = f'{cf:short}'
+    assert format_output == "Filename cf1.txt: {'a': '1', 'b': '2', 'c': '3'}"
+
+    format_output = f'{cf:long}'
+    assert format_output == """cf1.txt
+a=1
+b=2
+c=3
+"""
+
+
+def test_with(tmp_path):
+    filename = tmp_path / 'myconfig2.txt'
+
+    cf = ConfigFile(filename)
+
+    cf.set('a', '1')
+    cf.set('b', '2')
+    cf.set('c', '3')
+
+    cf.dump()
+    cf = None
+
+    with ConfigFile(filename) as cf:
+        assert cf.config == {'a': '1', 'b': '2', 'c': '3'}
+        cf.set('a', 200)
+        cf.set('z', 400)
+    cf = None
+
+    cf = ConfigFile(filename)
+    cf.load()
+    assert cf.config == {'a': '200', 'b': '2', 'c': '3', 'z': '400'}
+
