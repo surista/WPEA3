@@ -1,0 +1,191 @@
+
+This week, we built a new class -- two classes, even! -- that summarized many of the main points we've discussed during this course. The idea was to create a "ToDoList" class which contained any number of "Task" objects. Each instance of a Task, in turn, contained the name of a task, a due date/time, and an indication of whether it was complete.
+
+We didn't really create an application per se, but we did make it possible for someone to use our classes to create a to-do application. But of course, that's the whole point of object-oriented programming: When the class is done, we will have an object and API that'll make it straightforward to do all sorts of things with to-do lists, including (if we want) use them in a browser-based application or GUI application.  We could even subclclass ToDoList and extend the functionality, if we want.
+
+We started with a Task class, which had to do only a few things:
+
+    allow us to initialize it with text and a due date,
+    find out if it's overdue, and
+    get a string version of the task indicating if it's complete, overdue, or still waiting for us.
+
+My implementation started with the following implementation of "__init__":
+
+    def __init__(self, text: str, due_at: Union[str, arrow.arrow.Arrow]) -> None:
+        self.text = text
+        self.due_at: arrow.arrow.Arrow = arrow.get(due_at)
+        self.completed = False
+
+Notice that I decided to be friendly and flexible (as always!), taking either a string or an existing Arrow timestamp object as our "due_at" input.  There are apparently some additional packages out there that are good for dates and times, but I settled on Arrow a few years ago, and haven't been disappointed -- it makes my life so much easier, in that I don't have to consider the differences between the "date", "time", and "datetime" classes, not to mention parsing strings into dates and times.
+
+The fact that after importing "arrow", I can then say "arrow.get" and know that it'll work for most reasonable string and date formats is just fantastic.  I can then set the text to be the text that we got, the "due_at" attribute to be the result of running "arrow.get" (always an arrow datetime), and "completed" to be False.
+
+The "is_overdue" method is easy for humans to understand: Is the due date less than the current time? If so, then the task is overdue.  With standard "datetime" objects, it's annoying to make this calculations. But with arrow, I can just say:
+
+    def is_overdue(self) -> bool:
+        return (not self.completed) and (self.due_at < arrow.now())
+
+Then we get to "__repr__", which is how our object represents itself as a string. I just used a simple if/then statement to print the current status:
+
+    def __repr__(self) -> str:
+        if self.completed:
+            return f'COMPLETED task {self.text}'
+
+        elif self.is_overdue():
+            return f'OVERDUE Task {self.text}, was due {self.due_at}'
+
+        else:
+            return f'Task {self.text}, due at {self.due_at}'
+
+Notice how f-strings are really a game-changer, allowing me to insert data into the string in a natural and readable way.
+
+So much for an individual task. What about our to-do list as a whole?
+
+Well, we'll start off our to-do list with a very short "__init__".  Really, initializing our object does very little, other than get it ready to accept one or more tasks.  As such, I decided that we would have a "tasks" attribute, one which is a list -- and thus initialized as an empty list.
+
+The first method I asked you to implement was "__len__", which runs whenever we run the "len" function on an object. The easiest thing would have been to simply return the number of elements on our to-do list. But we usually want to find out how many things remain to be done, and not include those items that we had already completed.
+
+In other words: We want to count not all of the items in "self.tasks", but rather only those that are not yet completed.  This sounds like a job for a list comprehension -- because we have a sequence (self.tasks) and want to get another sequence, applying a filter from one to get the other.  And indeed, our implementation of "__len__" can look as follows:
+
+    def __len__(self) -> int:
+        return len([one_task
+                    for one_task in self.tasks
+                    if not one_task.completed])
+
+
+The next task was to define "__repr__" such that it provides us with a printout of each task in our list. That could be as easy as a comprehension joined with '\n', in which the comprehension's expression simply applies "str" to each of the items in "self.tasks".
+
+But of course, I decided that this would be too easy, so I asked you to sort the tasks first by due date and then by text.
+
+How can we do that?  Well, the "sorted" function takes an optional "key" argument, a function that determines the sort order of our items. Normally, this function can either be a function that we write, or a "lambda" expression. In either case, the function will get the current item from the list, with the function's return value determining the sort order.
+
+In this case, we want to sort first by the "due_at" attribute, and then by the "text" attribute. We could write our own function to do this, but it's easier (and more Pythonic, I believe) to use "operator.attrgetter", a function that returns a function which retrieves an attribute from an object. Moreover, "operator.attrgetter" takes more than one element -- which means that it'll return more than one attribute value, in a tuple.
+
+The final result is a method that looks like this:
+
+    def __repr__(self) -> str:
+        return '\n'.join(str(one_task)
+                         for one_task in sorted(self.tasks,
+                                                key=operator.attrgetter('due_at', 'text')))
+
+
+In other words: We go through each of our tasks, sorting them first by "due_at" and then by "text". Then we take the resulting sorted list, and apply "str" to each element, triggering the "__repr__" method that we defined per Task instance.  We then take the resulting iterable and join all of its elements together with "\n".  The result, a potentially long string, is returned to the caller.
+
+Next, I asked to write a method ("get_overdue_tasks") that returns all of those tasks that are overdue -- meaning that their due date is in the past, and they aren't yet complete.  Once again, we can use a list comprehension, this time checking to get the tasks that return "True" to the "is_overdue" method:
+
+    def get_overdue_tasks(self) -> List[Task]:
+        return [one_task
+                for one_task in self.tasks
+                if one_task.is_overdue()]
+
+
+What about the method "get_tasks_on" that I asked you to write?  This method had a few different challenges:  First, to look at the date, and not the entire timestamp. Second, if the user doesn't pass a date as an argument, then you should use today's date.
+
+So, where do we start?  If we assume that the user has given us a date, then we basically want to use a list comprehension, returning a list of tasks whose dates match.  But wait -- a timestamp includes both a date and a time.  How can we remove the time?
+
+In the "arrow" world, the answer is simple: Use the "date" method, which returns a "date" object:
+
+    def get_tasks_on(self, date: arrow) -> List[Task]:
+        return [one_task
+                for one_task in self.tasks
+                if one_task.due_at.date() == arrow.get(date).date()]
+
+
+Notice that by invoking "arrow.get" on whatever "date" is, we allow the user to pass us a string, "date", or "datetime" object, not just an instance of "arrow". 
+
+All of this is great *except* for one thing: We also need to allow for a default setting. Now, it might seem like a great idea to have something like this for the first line:
+
+    def get_tasks_on(self, date: arrow = arrow.now().date()) -> List[Task]:
+
+
+But this would be a *terrible* idea, because it would set the default to be the date of whenever the function was defined. This means that if your Python program runs for several weeks in a single session, then the default date will remain that of when it was defined. This is because of Python's way of storing defaults in the function object.
+
+The solution is to set the default to be "None", and then to check for that and set the date to be today's date if we got "None" as a value:
+
+    def get_tasks_on(self, date: arrow = None) -> List[Task]:
+        if date is None:
+            date = arrow.now().date()
+        return [one_task
+                for one_task in self.tasks
+                if one_task.due_at.date() == arrow.get(date).date()]
+
+
+Finally, if you want to find all of the tasks whose text includes a search text, then we can (once again!) use a list comprehension for filtering:
+
+    def get_matching_tasks(self, look_for: str) -> List[Task]:
+        return [one_task
+                for one_task in self.tasks
+                if look_for in one_task.text]
+
+
+
+And that's about it!
+
+I'll be back tomorrow with some final parting words for the course.
+
+Reuven
+
+ 
+
+#!/usr/bin/env python3
+
+import arrow
+import operator
+
+
+class Task():
+    def __init__(self, text, due_at):
+        self.text = text
+        self.due_at = arrow.get(due_at)
+        self.completed = False
+
+    def is_overdue(self):
+        return self.due_at < arrow.now()
+
+    def __repr__(self):
+        if self.completed:
+            return f'COMPLETED task {self.text}'
+
+        elif self.is_overdue():
+            return f'OVERDUE Task {self.text}, was due {self.due_at}'
+
+        else:
+            return f'Task {self.text}, due at {self.due_at}'
+
+
+class ToDoList():
+    def __init__(self):
+        self.tasks = []
+
+    def __len__(self):
+        return len([one_task
+                    for one_task in self.tasks
+                    if not one_task.completed])
+
+    def __repr__(self):
+        return '\n'.join(str(one_task)
+                         for one_task in sorted(self.tasks,
+                                                key=operator.attrgetter('due_at', 'text')))
+
+    def get_overdue_tasks(self):
+        return [one_task
+                for one_task in self.tasks
+                if one_task.is_overdue()]
+
+    def get_tasks_on(self, date=None):
+        if date is None:
+            date = arrow.now().date()
+        return [one_task
+                for one_task in self.tasks
+                if one_task.due_at.date() == arrow.get(date).date()]
+
+    def get_matching_tasks(self, look_for):
+        return [one_task
+                for one_task in self.tasks
+                if look_for in one_task.text]
+
+Questions? Comments? Problems? The Weekly Python Exercise forum is at http://forum.lerner.co.il/. To get Reuven's attention, be sure to tag your message with @reuven.
+To make sure you keep getting these emails, please add reuven@lerner.co.il to your address book or whitelist us. Want out of the loop? Unsubscribe.
+
+Our postal address: 14 Migdal Oz Street, Apt. #1, Modi'in 71703 Israel
+

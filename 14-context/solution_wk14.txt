@@ -1,0 +1,128 @@
+
+This week, we took a look at Python's "context manager protocol," which is a fancy way of saying, "what makes 'with' statements work."  People are so used to "with" statements, especially when it comes to working with files, that they don't realize how easily we can make our own objects work with the "with" statement.
+
+Typically, that's going to be for common functionality that would otherwise be repeated. In the case of files, we often want to flush + close a file, so that's the context-manager functionality. In the case of multithreaded locks, we often want to mark off a critical section of code, so that's the context-manager functionality.
+
+Of course, you can also define the context-manager behavior for before-and-after scenarios, such as starting and then either committing or rolling back a database transaction.
+
+Ensuring that a class can be used as a context manager requires writing two methods:
+
+- First, the __enter__ method. This method is used for setting up whatever assumptions will occur within the block. No matter what the method does, though, it *must* return an object.  The object that it returns will be assigned to the "as x" variable declared in the "with" statement, and presumably used within the block.  In many cases, returning "self" is sufficient. But if you don't return anything, then you'll effectively return "None", and then get some weird errors about None not having a particular attribute.
+
+- Second, the __exit__ method. This method takes care of any final tasks you want. This is where context managers often do quite a bit.  As it happens, the __exit__ method needs to take four arguments, with the last three reflecting any exception that might have been raised within the "with" block. These arguments are the exception type, exception value, and the traceback that was raised. I've rarely used these capabilities, but they can allow you to stop certain exceptions from "leaking" out of the "with" block.
+
+With this background in mind, I asked you this week to implement __enter__ to load the data from disk, and __exit__ to store it against to disk. This would allows us to work with an instance of ConfigFile within the "with" block, without having to explicitly invoke the "load" and "dump" methods.
+
+So, how did the solution look?  It wasn't that exciting or long, but it worked:
+
+    def __enter__(self):
+        self.load()
+        return self
+
+
+In other words: Upon starting the "with" block, we invoke "load" on the instance of "ConfigFile" and then return the instance.
+
+The implementation of __exit__ was even shorter:
+
+    def __exit__(self):
+        self.dump()
+
+
+This is because the return value from "__enter__" is crucial, but that of "__exit__" is ignored completely.
+
+Now, it might seem like this implementation was trivial. And indeed, it was quite short. But the implications for anyone wanting to use our "ConfigFile" class were pretty big -- it means that they could ignore "load" and "dump", and use a context manager to work with our object.  In this way, we have simplified the API for working with our class.
+
+It goes without saying (but I'll say it anyway!) that the point of a context manager is to keep the API for other classes similarly simple, while hiding similarly complex behavior, as well.
+
+Now, I mentioned in the question for this week that there's another way to create such functionality. You can do it with a combination of decorator and generator function, two topics we're kept from in this course. It also means not using methods directly, but rather defining the context manager's functionality outside of the class.  If you're curious, look up the "contextlib" module, and the "contextmanager" decorator defined inside of it.  But that's mostly for where you want context-manager functionality without a class, which is definitely not the case here.
+
+That's it for this class. Tomorrow, I'll be back with one (final!) challenge for this course.
+
+Until then,
+
+Reuven
+
+ 
+
+#!/usr/bin/env python3
+
+from shutil import copy
+import time
+import os
+
+
+class ConfigFile():
+    def __init__(self, filename, sep='='):
+
+        self.filename = filename
+        self.sep = sep
+        self.config = {}
+
+    def set(self, name, value):
+        self.config[name] = str(value)
+
+    def get(self, name):
+        return self.config[name]
+
+    def dump(self):
+        with open(self.filename, 'w') as outfile:
+            for key, value in self.config.items():
+                outfile.write(f'{key}{self.sep}{value}\n')
+
+    def load(self):
+        self.config = {}
+        for one_line in open(self.filename):
+            key, value = one_line.strip().split(self.sep, 1)
+            self.config[key] = value
+
+    def __eq__(self, other):
+        return self.config == other.config
+
+    def __lt__(self, other):
+        return set(self.config) < set(other.config)
+
+    def __gt__(self, other):
+        return set(self.config) > set(other.config)
+
+    def __format__(self, format_code):
+        if not format_code or format_code == 'short':
+            return f'Filename {self.filename}: {self.config}'
+        elif format_code == 'long':
+            output = f'{self.filename}\n'
+            output += '\n'.join([f'{key}={value}'
+                                 for key, value in self.config.items()])
+
+            output += '\n'
+            return output
+        elif format_code == 'stats':
+            return f'ConfigFile {self.filename}, with {len(self.config)} key-value pairs'
+        else:
+            raise TypeError(f'Unknown format code {format_code}')
+
+    def __enter__(self):
+        self.load()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.dump()
+
+
+class ConfigFileWithBackups(ConfigFile):
+    def timestamp_filename(self, timestamp):
+        dirname, filename = os.path.split(self.filename)
+        new_filename = f'{timestamp}-{filename}'
+        return os.path.join(dirname, new_filename)
+
+    def dump(self):
+        super().dump()
+        copy(self.filename,
+             self.timestamp_filename(time.time()))
+
+    def restore(self, timestamp):
+        old_filename = self.filename
+        self.filename = self.timestamp_filename(timestamp)
+        super().load()
+        self.filename = old_filename
+
+
+

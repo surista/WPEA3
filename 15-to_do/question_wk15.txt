@@ -1,0 +1,141 @@
+
+For our final exercise, we're going to create a to-do list system. That system will be implemented using Python objects.  This exercise is a bit longer than the others we've done -- but hey, now you've been through the ringer with enough objects, so I'm expecting (hoping?) that you can do this one, too.
+
+We're going to create a simple application that will let people create a "to-do" list. Each list will contain one or more tasks.  So an instance of ToDoList will have an attribute, "tasks" -- a list of Task objects.  And each instance of "Task" will have three attributes -- "text" describing the task, and "due_at", an "arrow" object (more on that in a bit) that indicates when it's due, and "completed", a boolean indicating whether the task is complete.
+
+The ToDoList class will also support the following methods:
+
+    len() will return the number of incomplete tasks on the to-do list
+    repr() will return a string, sorted first by date and then by name, of the tasks.  Note that this might be a bit tricky -- so take a look at the operator.attrgetter method, which can really help in this sort of situation.
+    You can add a task (i.e., an instance of "Task") to the to-do list (by appending to the "tasks" attribute)
+    Find out which tasks are overdue with get_overdue_tasks.  It'll return a list of incomplete tasks whose due dates are in the past.
+    Show the tasks that are on the schedule for any day with get_tasks_on, defaulting to today's date.  Note that the time doesn't have to match.
+    Search through the tasks for those matching a particular string in the text.
+
+We're going to use "arrow" for time.  I've found that "arrow" is far easier to work with than Python's built-in "time", "date", and "datetime" functionality.  In particular, pay attention to the "arrow.get" method, which can parse a large number of date and time formats automatically.  You can read more here:
+
+    https://pypi.org/project/arrow/
+
+I'll be back on Monday with the -- don't weep too loudly, now -- solution to the final exercise of this course.
+
+All the best,
+
+Reuven
+ 
+
+from solution import Task, ToDoList
+import arrow
+
+
+def test_create_task_with_string():
+    t = Task('new task', '2019-07-14 12:34')
+    assert t.text == 'new task'
+    assert t.due_at.year == 2019
+    assert t.due_at.month == 7
+    assert t.due_at.day == 14
+    assert t.due_at.hour == 12
+    assert t.due_at.minute == 34
+
+
+def test_create_task_with_date():
+    d = arrow.get('2019-07-14 12:34')
+    t = Task('new task', d)
+    assert t.text == 'new task'
+    assert t.due_at.year == 2019
+    assert t.due_at.month == 7
+    assert t.due_at.day == 14
+    assert t.due_at.hour == 12
+    assert t.due_at.minute == 34
+
+
+def test_create_overdue_task():
+    t = Task('new task', '2019-07-14 12:34')
+    assert t.is_overdue()
+
+
+def test_create_not_overdue_task():
+    t = Task('new task', '2039-07-14 12:34')
+    assert not t.is_overdue()
+
+
+def test_overdue_task_repr():
+    t = Task('new task', '2019-07-14 12:34')
+    assert str(t) == 'OVERDUE Task new task, was due 2019-07-14T12:34:00+00:00'
+
+
+def test_task_repr():
+    t = Task('new task', '2029-07-14 12:34')
+    assert str(t) == 'Task new task, due at 2029-07-14T12:34:00+00:00'
+    t.completed = True
+    assert str(t) == 'COMPLETED task new task'
+
+
+def test_to_do_list_with_tasks():
+    t1 = Task('new task 1', '2029-08-22 12:34')
+    t2 = Task('new task 2', '2029-07-14 12:34')
+
+    td = ToDoList()
+    assert len(td) == 0
+    assert str(td) == ''
+
+    td.tasks += [t1, t2]
+    assert len(td) == 2
+    assert str(td) == '''Task new task 2, due at 2029-07-14T12:34:00+00:00
+Task new task 1, due at 2029-08-22T12:34:00+00:00'''
+
+    t1.completed = True
+    assert len(td) == 1
+
+
+def test_overdue_tasks():
+    t1 = Task('new task 1', '2029-08-22 12:34')
+    t2 = Task('new task 2', '2029-07-14 12:34')
+
+    td = ToDoList()
+    td.tasks += [t1, t2]
+    assert len(td.get_overdue_tasks()) == 0
+
+    t1 = Task('new task 1', '2009-08-22 12:34')
+    t2 = Task('new task 2', '2029-07-14 12:34')
+
+    td = ToDoList()
+    td.tasks += [t1, t2]
+    assert len(td.get_overdue_tasks()) == 1
+
+
+def test_tasks_on():
+    t1 = Task('new task 1', '2019-07-14 12:34')
+    t2 = Task('new task 2', '2029-07-14 12:34')
+    t3 = Task('new task 3', arrow.now().date())
+
+    td = ToDoList()
+    td.tasks += [t1, t2, t3]
+
+    tasks_default = td.get_tasks_on()
+    assert len(tasks_default) == 1
+
+    tasks_in_2019 = td.get_tasks_on('2019-07-14')
+    assert len(tasks_in_2019) == 1
+
+    tasks_in_2020 = td.get_tasks_on('2020-07-14')
+    assert len(tasks_in_2020) == 0
+
+
+def test_matching_tasks():
+    t1 = Task('new task abcd', '2019-07-14 12:34')
+    t2 = Task('new task efgh', '2029-07-14 12:34')
+    t3 = Task('new task abgh', arrow.now().date())
+
+    td = ToDoList()
+    td.tasks += [t1, t2, t3]
+
+    tasks = td.get_matching_tasks('qwerqerqrqreqreq')
+    assert len(tasks) == 0
+
+    tasks = td.get_matching_tasks('ab')
+    assert len(tasks) == 2
+
+    tasks = td.get_matching_tasks('efgh')
+    assert len(tasks) == 1
+
+

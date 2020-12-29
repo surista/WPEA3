@@ -6,7 +6,8 @@ Nov 2020
 Module documentation goes here
 """
 
-class Room:
+
+class Room():
     def __init__(self, name, size):
         self.name = name
         self.size = size
@@ -28,13 +29,6 @@ class House():
 
     def __str__(self):
         output = 'House:\n'
-        output += '\n'.join(str(one_room) for one_room in self.rooms)
+        output += '    \n    '.join(str(one_room)
+                            for one_room in self.rooms)
         return output
-
-
-h = House()
-bedroom = Room('bedroom', 10)
-kitchen = Room('kitchen', 9)
-bathroom = Room('bathroom', 3)
-h.add_rooms(bedroom, kitchen, bathroom)
-print(h)
